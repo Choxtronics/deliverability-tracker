@@ -454,6 +454,44 @@ export default function App() {
     }
     await supabase.from("entries").insert(rows); loadAll();
   };
+
+  const generateDemoUpdates = async () => {
+    const samples=[
+      {type:"Experiment",worker:"Federico",title:"Testing IP warm-up on Cluster 4",description:"Started a gradual warm-up plan on Cluster 4 increasing daily send volume by 10% each day.",result:"After 5 days, bounce rate dropped from 6.2% to 3.8%.",status:"Ongoing",ip_change_type:"Added IPs",ip_detail:"Cluster 4",ip_range:"185.228.38.1-20",ip_reason:"Warm-up plan",ip_result:"Bounce improving",extra_ips:[],replies:[]},
+      {type:"Change",worker:"Ahmed",title:"Switched tracking domain for EmailChef",description:"Replaced old tracking domain with a clean domain.",result:"No blacklist issues after 3 days.",status:"Completed",ip_change_type:"— None —",ip_detail:"",ip_range:"",ip_reason:"",ip_result:"",extra_ips:[],replies:[]},
+      {type:"Fix",worker:"Mai",title:"Resolved queue buildup on Outside Cluster 2",description:"Cluster 2 had stuck queue due to misconfigured retry interval.",result:"Queue cleared within 20 minutes.",status:"Completed",ip_change_type:"Removed IPs",ip_detail:"Cluster 2",ip_range:"185.228.36.70-75",ip_reason:"Stuck queue",ip_result:"Queue cleared",extra_ips:[],replies:[]},
+      {type:"Observation",worker:"Khaled",title:"Spike in MS 550 5.7.1 errors Monday mornings",description:"Microsoft bounce errors spike every Monday 08:00–10:00 UTC.",result:"Still investigating.",status:"Ongoing",ip_change_type:"Changed Snooze Time",ip_detail:"Cluster 21",ip_range:"199.187.172.33-69",ip_reason:"High MS complaint rate",ip_result:"Snooze extended to 6h",extra_ips:[],replies:[]},
+    ];
+    const now=Date.now();
+    const rows=samples.map((s,i)=>({...s,id:"DEMO_"+genId(),ts:new Date(now-(samples.length-i)*14*60*60*1000).toISOString()}));
+    await supabase.from("updates").insert(rows); loadAll();
+  };
+
+  const generateDemoMonthly = async () => {
+    const now = new Date();
+    const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+    const statuses = ["Done","In Progress","Pending","Done"];
+    const notes = ["Completed and verified","Currently working on it","","All links updated"];
+    const rows=[];
+    MONTHLY_TASKS.forEach((task,ti)=>{
+      WORKERS.forEach((worker,wi)=>{
+        const existing = monthlyLogs.find(r=>r.month===month&&r.task_id===task.id&&r.worker===worker);
+        if(!existing){ rows.push({id:"DEMO_"+genId(),month,task_id:task.id,worker,status:statuses[(ti+wi)%statuses.length],notes:notes[(ti+wi)%notes.length],ts:new Date().toISOString()}); }
+      });
+    });
+    if(rows.length) await supabase.from("monthly_logs").insert(rows); loadAll();
+  };
+
+  const clearDemoData = async () => {
+    if(!window.confirm("Remove all demo data?")) return;
+    await Promise.all([
+      supabase.from("entries").delete().like("id","DEMO_%"),
+      supabase.from("updates").delete().like("id","DEMO_%"),
+      supabase.from("monthly_logs").delete().like("id","DEMO_%"),
+    ]);
+    loadAll();
+  };
+
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [cpOld, setCpOld] = useState("");
   const [cpNew, setCpNew] = useState("");
@@ -1130,6 +1168,34 @@ export default function App() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* DEMO */}
+        {tab===6 && (
+          <div style={{maxWidth:600,margin:"0 auto"}}>
+            <Card style={{marginBottom:16,padding:"20px 24px"}}>
+              <div style={{fontSize:16,fontWeight:500,color:"#1E293B",marginBottom:4}}>Demo Data</div>
+              <div style={{fontSize:13,color:"#64748B",marginBottom:20,lineHeight:1.6}}>Generate realistic sample data to show your team how the tracker looks when fully in use. All demo records can be removed in one click.</div>
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                <div style={{background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+                  <div><div style={{fontSize:13,fontWeight:500,color:"#1E293B",marginBottom:2}}>📋 Task Board entries</div><div style={{fontSize:12,color:"#94A3B8"}}>2 weeks of daily task logs for all 4 workers</div></div>
+                  <button onClick={generateDemoData} style={{padding:"8px 18px",borderRadius:8,background:"#6366F1",border:"none",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer",flexShrink:0}}>Generate</button>
+                </div>
+                <div style={{background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+                  <div><div style={{fontSize:13,fontWeight:500,color:"#1E293B",marginBottom:2}}>⚗ Cluster Updates</div><div style={{fontSize:12,color:"#94A3B8"}}>4 sample posts — experiments, fixes, observations</div></div>
+                  <button onClick={generateDemoUpdates} style={{padding:"8px 18px",borderRadius:8,background:"#F59E0B",border:"none",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer",flexShrink:0}}>Generate</button>
+                </div>
+                <div style={{background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+                  <div><div style={{fontSize:13,fontWeight:500,color:"#1E293B",marginBottom:2}}>📅 Monthly Tasks</div><div style={{fontSize:12,color:"#94A3B8"}}>Sample progress for all workers this month</div></div>
+                  <button onClick={generateDemoMonthly} style={{padding:"8px 18px",borderRadius:8,background:"#059669",border:"none",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer",flexShrink:0}}>Generate</button>
+                </div>
+                <div style={{background:"#FEF2F2",border:"1px solid #FCA5A5",borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginTop:8}}>
+                  <div><div style={{fontSize:13,fontWeight:500,color:"#B91C1C",marginBottom:2}}>🗑 Remove all demo data</div><div style={{fontSize:12,color:"#F87171"}}>Deletes only demo records — real data is kept safe</div></div>
+                  <button onClick={clearDemoData} style={{padding:"8px 18px",borderRadius:8,background:"#B91C1C",border:"none",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer",flexShrink:0}}>Remove</button>
+                </div>
+              </div>
+            </Card>
           </div>
         )}
 
