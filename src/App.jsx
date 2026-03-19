@@ -442,7 +442,6 @@ export default function App() {
   const isValidIP=ip=>{const parts=ip.split(".");if(parts.length!==4)return false;return parts.every(p=>!isNaN(p)&&parseInt(p)>=0&&parseInt(p)<=255);};
   const handleIPSearch=()=>{const ip=ipSearch.trim();setIpSearched(ip);setIpResults(isValidIP(ip)?findClusters(ip):[]);};
   const filteredClusters=CLUSTERS.filter(c=>!browseSearch||c.id.toString().includes(browseSearch)||c.name.toLowerCase().includes(browseSearch.toLowerCase())||c.notes.toLowerCase().includes(browseSearch.toLowerCase())||c.ranges.some(r=>r.includes(browseSearch)));
-  const generateDemoData = async () => {
     const chg=["Rotated IPs","Cleared queue","Updated DNS","Restarted service","None"], nts=["All good","Monitoring","Escalated","Auto-resolved",""];
     const rows=[];
     for(let d=13;d>=0;d--){
