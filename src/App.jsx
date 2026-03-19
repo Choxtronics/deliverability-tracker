@@ -310,7 +310,7 @@ export default function App() {
     { icon:"↗", label:"Reports" },
     { icon:"📅", label:"Monthly Tasks" },
     { icon:"🔍", label:"IP Finder" },
-    { icon:"🎯", label:"Demo" },
+
     ...(isAdmin ? [{ icon:"👤", label:"Users" }] : []),
   ];
 
@@ -492,7 +492,25 @@ export default function App() {
     loadAll();
   };
 
-  const applyUPreset = preset => {
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [cpOld, setCpOld] = useState("");
+  const [cpNew, setCpNew] = useState("");
+  const [cpConfirm, setCpConfirm] = useState("");
+  const [cpMsg, setCpMsg] = useState("");
+  const [cpError, setCpError] = useState("");
+
+  const handleChangePassword = async () => {
+    setCpMsg(""); setCpError("");
+    if (!cpOld || !cpNew || !cpConfirm) { setCpError("All fields are required."); return; }
+    if (cpNew !== cpConfirm) { setCpError("New passwords don't match."); return; }
+    if (cpNew.length < 4) { setCpError("Password must be at least 4 characters."); return; }
+    const { data } = await supabase.from("users").select("*").eq("id", currentUser.id).eq("password", cpOld).single();
+    if (!data) { setCpError("Current password is incorrect."); return; }
+    await supabase.from("users").update({ password: cpNew }).eq("id", currentUser.id);
+    setCpMsg("Password changed successfully!");
+    setCpOld(""); setCpNew(""); setCpConfirm("");
+    setTimeout(() => { setShowChangePassword(false); setCpMsg(""); }, 2000);
+  };
     const now=new Date(); const fmt=d=>d.toISOString().split("T")[0]; setFilterUPreset(preset);
     if(preset==="all"){setFilterUFrom("");setFilterUTo("");}
     if(preset==="today"){setFilterUFrom(fmt(now));setFilterUTo(fmt(now));}
@@ -581,6 +599,34 @@ export default function App() {
       </div>
 
       <div style={{maxWidth:1100,margin:"0 auto",padding:"24px 16px"}}>
+
+        {/* CHANGE PASSWORD MODAL */}
+        {showChangePassword && (
+          <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}}>
+            <div style={{background:"#fff",borderRadius:16,padding:"28px",width:"100%",maxWidth:400,margin:"0 16px"}}>
+              <div style={{fontSize:16,fontWeight:600,color:"#1E293B",marginBottom:4}}>🔑 Change Password</div>
+              <div style={{fontSize:12,color:"#94A3B8",marginBottom:20}}>Update your login password</div>
+              <div style={{marginBottom:12}}>
+                <label style={labelStyle}>Current Password</label>
+                <input type="password" value={cpOld} onChange={e=>setCpOld(e.target.value)} style={inputStyle} placeholder="Enter current password"/>
+              </div>
+              <div style={{marginBottom:12}}>
+                <label style={labelStyle}>New Password</label>
+                <input type="password" value={cpNew} onChange={e=>setCpNew(e.target.value)} style={inputStyle} placeholder="Enter new password"/>
+              </div>
+              <div style={{marginBottom:16}}>
+                <label style={labelStyle}>Confirm New Password</label>
+                <input type="password" value={cpConfirm} onChange={e=>setCpConfirm(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleChangePassword()} style={inputStyle} placeholder="Repeat new password"/>
+              </div>
+              {cpError&&<div style={{fontSize:12,color:"#B91C1C",background:"#FEF2F2",border:"1px solid #FCA5A5",borderRadius:8,padding:"8px 12px",marginBottom:12}}>{cpError}</div>}
+              {cpMsg&&<div style={{fontSize:12,color:"#166534",background:"#DCFCE7",border:"1px solid #BBF7D0",borderRadius:8,padding:"8px 12px",marginBottom:12}}>{cpMsg}</div>}
+              <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                <Btn onClick={()=>{setShowChangePassword(false);setCpOld("");setCpNew("");setCpConfirm("");setCpError("");setCpMsg("");}}>Cancel</Btn>
+                <Btn variant="primary" onClick={handleChangePassword}>Change Password</Btn>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* TASK BOARD */}
         {tab===0 && (
@@ -1127,9 +1173,6 @@ export default function App() {
 
         {/* DEMO */}
         {tab===6 && (
-          <div style={{maxWidth:600,margin:"0 auto"}}>
-            <Card style={{marginBottom:16,padding:"20px 24px"}}>
-              <div style={{fontSize:16,fontWeight:500,color:"#1E293B",marginBottom:4}}>Demo Data</div>
               <div style={{fontSize:13,color:"#64748B",marginBottom:20,lineHeight:1.6}}>Generate realistic sample data to show your team how the tracker looks when fully in use. All demo records can be removed in one click.</div>
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
                 <div style={{background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
@@ -1154,7 +1197,7 @@ export default function App() {
         )}
 
         {/* USERS - Admin only */}
-        {tab===7 && isAdmin && <AdminPanel currentUser={currentUser}/>}
+        {tab===6 && isAdmin && <AdminPanel currentUser={currentUser}/>}
 
       </div>
     </div>
