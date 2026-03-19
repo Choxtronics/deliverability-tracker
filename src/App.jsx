@@ -465,11 +465,17 @@ export default function App() {
             <div style={{fontSize:12,color:"#93B4D8",marginTop:2,fontWeight:500}}>{fmtFull(todayStr())}</div>
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-            {WORKERS.map(w=>{ const c=wc(w); const done=new Set(todayEntries.filter(e=>e.worker===w).map(e=>e.taskId)).size; const pct=Math.round((done/TASKS.length)*100);
-              return <div key={w} style={{display:"flex",alignItems:"center",gap:8,background:"#243F72",border:"1px solid #2E5096",borderRadius:10,padding:"6px 12px"}}>
-                <Avatar name={w} size={26}/>
+            {WORKERS.map(w=>{ const c=wc(w); const done=new Set(todayEntries.filter(e=>e.worker===w).map(e=>e.taskId)).size; const pct=Math.round((done/TASKS.length)*100); const isLoggedIn=w===activeWorker&&!isAdmin;
+              return <div key={w} style={{display:"flex",alignItems:"center",gap:8,background:"#243F72",border:`1px solid ${isLoggedIn?"#60A5FA":"#2E5096"}`,borderRadius:10,padding:"6px 12px",position:"relative"}}>
+                <div style={{position:"relative"}}>
+                  <Avatar name={w} size={26}/>
+                  {isLoggedIn&&<span style={{position:"absolute",top:-3,right:-3,width:9,height:9,borderRadius:"50%",background:"#22C55E",border:"2px solid #1B3A6B"}}/>}
+                </div>
                 <div>
-                  <div style={{fontSize:12,fontWeight:500,color:"#F1F5F9"}}>{w}</div>
+                  <div style={{display:"flex",alignItems:"center",gap:5}}>
+                    <div style={{fontSize:12,fontWeight:500,color:"#F1F5F9"}}>{w}</div>
+                    {isLoggedIn&&<span style={{fontSize:9,background:"#22C55E",color:"#fff",padding:"1px 5px",borderRadius:20,fontWeight:600}}>YOU</span>}
+                  </div>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
                     <div style={{width:48,height:3,borderRadius:2,background:"#334155"}}>
                       <div style={{width:`${pct}%`,height:3,borderRadius:2,background:c.dot,transition:"width 0.3s"}}/>
@@ -487,6 +493,7 @@ export default function App() {
               </div>
             </div>
             <button onClick={loadAll} style={{padding:"6px 12px",borderRadius:8,border:"1px solid #2E5096",background:"#243F72",color:"#93C5FD",fontSize:12,cursor:"pointer",fontWeight:500}}>↻ Refresh</button>
+
             <button onClick={()=>setCurrentUser(null)} style={{padding:"6px 12px",borderRadius:8,border:"1px solid #2E5096",background:"#243F72",color:"#F87171",fontSize:12,cursor:"pointer",fontWeight:500}}>⎋ Logout</button>
           </div>
         </div>
