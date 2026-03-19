@@ -391,43 +391,43 @@ export default function App() {
   const [ipTab, setIpTab] = useState("search");
 
   const CLUSTERS = [
-    { id:2,   name:"Test",                                    notes:"Test cluster.", ranges:[] },
-    { id:3,   name:"Dedalus and Mediatech",                   notes:"Used for accounts antonio.fania@dedalus.eu and automail@mediatec.it to solve rate limit problems.", ranges:["185.228.36.6-15"] },
-    { id:5,   name:"Legacy Cluster — Stop Using",             notes:"Used for Non-EU who purchased Smart Routing. No new accounts added. Will be deleted soon.", ranges:[] },
-    { id:11,  name:"bbturbosmtp@pp-media.ch",                 notes:"1 Extra IP.", ranges:[] },
-    { id:15,  name:"Non-EU Basic — Spam Report / Listing History", notes:"Account IP: 199.187.175.35-254 / Cluster IP: 199.187.175.160-180 / Extendable to: 199.187.175.35-254", ranges:["199.187.175.35-254","199.187.175.160-180"] },
-    { id:17,  name:"EU PRO — Spam Report / Listing History",  notes:"Account IP: 5.83.159.1-254, 185.228.36.158-229 / Cluster IP: 185.228.36.92-156 / Extendable to: 185.228.36.215-239, 89.144.43.1-254", ranges:["5.83.159.1-254","185.228.36.158-229","185.228.36.92-156","185.228.36.215-239","89.144.43.1-254"] },
-    { id:21,  name:"Extremely High Complaint Rate",           notes:"Account IP: 199.187.172.33-69, 199.187.172.86-254 / Cluster IP: same ranges", ranges:["199.187.172.33-69","199.187.172.86-254"] },
-    { id:25,  name:"EU Basic Paid — Good Old",                notes:"Account IP: 185.228.36.17-22, 185.228.36.25-35 / Cluster IP: same / Extendable to: 185.228.36.36-69", ranges:["185.228.36.17-22","185.228.36.25-35","185.228.36.36-69"] },
-    { id:27,  name:"Non-EU Good Old",                         notes:"Account IP: 199.187.174.1-40 / Cluster IP: 199.187.174.1-40", ranges:["199.187.174.1-40"] },
-    { id:31,  name:"Non-EU Bad Old",                          notes:"Account IP: 199.187.174.41-127 / Cluster IP: 199.187.174.41-127", ranges:["199.187.174.41-127"] },
-    { id:33,  name:"Extra IP — tataaia.smtp@gc-solutions.net",notes:"Dedicated extra IP.", ranges:[] },
-    { id:35,  name:"Extra IP — info@artspr.gr",               notes:"Dedicated extra IP.", ranges:[] },
-    { id:43,  name:"T-online.de EU",                          notes:"Account IP: 185.228.36.0/22 / 89.144.43.0/24 / 5.83.159.0/24", ranges:["185.228.36.0/22","89.144.43.0/24","5.83.159.0/24"] },
-    { id:45,  name:"T-online.de 175 Range",                   notes:"Account IP: 199.187.175.0/24", ranges:["199.187.175.0/24"] },
-    { id:47,  name:"T-online.de Non-EU",                      notes:"Account IP: 199.187.172.0/24 / 199.187.173.0/24 / 199.187.174.0/24 / 199.244.72.0/24", ranges:["199.187.172.0/24","199.187.173.0/24","199.187.174.0/24","199.244.72.0/24"] },
-    { id:49,  name:"mkokash",                                 notes:"—", ranges:[] },
-    { id:51,  name:"Extra IP — info@bytesystem.it",           notes:"Extra IP.", ranges:[] },
-    { id:55,  name:"Extra IP — info@southwestfloridacopier.com", notes:"Extra IP.", ranges:[] },
-    { id:59,  name:"domenico.osto@regione.veneto.it",         notes:"2 dedicated IPs.", ranges:[] },
-    { id:74,  name:"EU Paid Bad Old",                         notes:"Account IP: 185.228.36.71-82 / Cluster IP: 185.228.36.71-99", ranges:["185.228.36.71-82","185.228.36.71-99"] },
-    { id:76,  name:"saad test",                               notes:"Test.", ranges:[] },
-    { id:78,  name:"jon@system-uk.com",                       notes:"1 Extra IP.", ranges:[] },
-    { id:88,  name:"Non-EU PRO",                              notes:"Account IP: 199.244.75.1-254 / Cluster IP: 199.244.73.30-254 / Extendable to: 199.187.174.128-245", ranges:["199.244.75.1-254","199.244.73.30-254","199.187.174.128-245"] },
-    { id:100, name:"Extra IP — h.haile@seocomplete.de",       notes:"Extra IP.", ranges:[] },
-    { id:102, name:"Extra IP — info@veriseo.de",              notes:"Extra IP.", ranges:[] },
-    { id:110, name:"Smart Routing V2.0 — Active",             notes:"Active smart routing pool.", ranges:[] },
-    { id:112, name:"Smart Routing V2.0 — Inactive",           notes:"Inactive smart routing pool.", ranges:[] },
-    { id:114, name:"Non-EU New and Free Accounts",            notes:"Account IP: 199.187.173.1-59 / Cluster IP: 199.187.173.1-59", ranges:["199.187.173.1-59"] },
-    { id:116, name:"Non-EU PRO with History",                 notes:"Account IP: 199.244.74.1-254 / Cluster IP: 199.244.72.10-254", ranges:["199.244.74.1-254","199.244.72.10-254"] },
-    { id:118, name:"EU PRO Accounts",                         notes:"Account IP: 185.228.38.1-254, 185.228.39.101-254 / Cluster IP: 185.228.37.91-254", ranges:["185.228.38.1-254","185.228.39.101-254","185.228.37.91-254"] },
-    { id:120, name:"Justin Movemedia",                        notes:"Dedicated Smart Routing Pool — 10 IPs.", ranges:[] },
-    { id:126, name:"TJ Marsé",                                notes:"15 dedicated IPs.", ranges:[] },
-    { id:128, name:"EU Servesiclienti and Firma5",            notes:"—", ranges:[] },
-    { id:132, name:"EU Abusers",                              notes:"Account IP: 185.228.36.215-230 / Cluster IP: 185.228.36.215-230", ranges:["185.228.36.215-230"] },
-    { id:134, name:"New and Free EU",                         notes:"Account IP: 185.228.36.240-254 / Cluster IP: 185.228.36.240-254", ranges:["185.228.36.240-254"] },
-    { id:136, name:"Dedicated IP — info@mesajio.com",         notes:"Dedicated IP cluster.", ranges:[] },
-    { id:142, name:"Extra IP — smithhs831@gmail.com",         notes:"Extra IP.", ranges:[] },
+    { id:2,   name:"test",                                          notes:"—", ranges:[] },
+    { id:3,   name:"Dedalus and Mediatech",                         notes:"Used for accounts antonio.fania@dedalus.eu and automail@mediatec.it to solve rate limit problems. Cluster IP range: 185.228.36.6-15", ranges:["185.228.36.6-15"] },
+    { id:5,   name:"Legacy cluster/Stop using this cluster",        notes:"Used for Non-EU who purchased Smart Routing/ Now we don't add any new account here/ Will be deleted as soon as possible.", ranges:[] },
+    { id:11,  name:"bbturbosmtp@pp-media.ch",                       notes:"1 Extra IP", ranges:[] },
+    { id:15,  name:"Non-EU Basic Spam report or Listing history",   notes:"Account IP range: 199.187.175.35-254/ Cluster IP range: 199.187.175.160-180. Can be extended for backup to 199.187.175.35-254", ranges:["199.187.175.35-254","199.187.175.160-180"] },
+    { id:17,  name:"EU PRO with spam report or listing history",    notes:"Account IP range: 5.83.159.1-254, 185.228.36.158-229/ Cluster IP 185.228.36.92-156, Can be extended to 185.228.36.215-239, 89.144.43.1-254", ranges:["5.83.159.1-254","185.228.36.158-229","185.228.36.92-156","185.228.36.215-239","89.144.43.1-254"] },
+    { id:21,  name:"Accounts with extremely high complain rate",    notes:"Account IP: 199.187.172.33-69 199.187.172.86-254/ IP cluster: 199.187.172.33-69 199.187.172.86-254", ranges:["199.187.172.33-69","199.187.172.86-254"] },
+    { id:25,  name:"EU Basic Paid good old",                        notes:"Account IP: 185.228.36.17-22, 185.228.36.25-35 / Cluster IP: 185.228.36.17-22, 185.228.36.25-35/ can be extended to 185.228.36.36-69", ranges:["185.228.36.17-22","185.228.36.25-35","185.228.36.36-69"] },
+    { id:27,  name:"Non-EU good old",                               notes:"Account IP: 199.187.174.1-40 / Cluster IP: 199.187.174.1-40", ranges:["199.187.174.1-40"] },
+    { id:31,  name:"Non-EU bad old",                                notes:"Account IP: 199.187.174.41-127 / Cluster IP: 199.187.174.41-127", ranges:["199.187.174.41-127"] },
+    { id:33,  name:"Extra IP for tataaia.smtp@gc-solutions.net",    notes:"—", ranges:[] },
+    { id:35,  name:"Extra IP for info@artspr.gr",                   notes:"—", ranges:[] },
+    { id:43,  name:"T-online.de EU",                                notes:"185.228.36.0/22, 89.144.43.0/24, 5.83.159.0/24", ranges:["185.228.36.0/22","89.144.43.0/24","5.83.159.0/24"] },
+    { id:45,  name:"t-online.de 175 range",                         notes:"199.187.175.0/24", ranges:["199.187.175.0/24"] },
+    { id:47,  name:"T-online.de Non-EU",                            notes:"199.187.172.0/24, 199.187.173.0/24, 199.187.174.0/24, 199.244.72.0/24", ranges:["199.187.172.0/24","199.187.173.0/24","199.187.174.0/24","199.244.72.0/24"] },
+    { id:49,  name:"mkokash",                                       notes:"—", ranges:[] },
+    { id:51,  name:"info@bytesystem.it",                            notes:"Extra IP", ranges:[] },
+    { id:55,  name:"info@southwestfloridacopier.com",               notes:"Extra IP", ranges:[] },
+    { id:59,  name:"domenico.osto@regione.veneto.it",               notes:"2 dedicated IPs", ranges:[] },
+    { id:74,  name:"EU paid bad old",                               notes:"Account IP: 185.228.36.71-82 / Cluster IP: 185.228.36.71-99", ranges:["185.228.36.71-82","185.228.36.71-99"] },
+    { id:76,  name:"saad test",                                     notes:"—", ranges:[] },
+    { id:78,  name:"jon@system-uk.com",                             notes:"1 Extra IP", ranges:[] },
+    { id:88,  name:"Non EU PRO",                                    notes:"Account IP: 199.244.75.1-254 / Cluster IP: 199.244.73.30-219 can be extended to 199.187.174.128-245", ranges:["199.244.75.1-254","199.244.73.30-219","199.187.174.128-245"] },
+    { id:100, name:"Extra IP for account 157642 h.haile@seocomplete.de", notes:"—", ranges:[] },
+    { id:102, name:"Extra IP for account 157988 info@veriseo.de",   notes:"—", ranges:[] },
+    { id:110, name:"Smart routing V2.0 Active",                     notes:"—", ranges:[] },
+    { id:112, name:"Smart routing V2.0 In-Active",                  notes:"—", ranges:[] },
+    { id:114, name:"Non-EU New and free accounts",                  notes:"Account IP: 199.187.173.1-59/ IP cluster: 199.187.173.1-59", ranges:["199.187.173.1-59"] },
+    { id:116, name:"Non EU PRO with History",                       notes:"Account IP: 199.244.74.1-254 / Cluster IP: 199.244.72.10-254", ranges:["199.244.74.1-254","199.244.72.10-254"] },
+    { id:118, name:"EU PRO accounts",                               notes:"Account IP: 185.228.38.1-254, 185.228.39.101-254 / Cluster IP: 185.228.37.91-254", ranges:["185.228.38.1-254","185.228.39.101-254","185.228.37.91-254"] },
+    { id:120, name:"Justin Movemedia",                              notes:"Dedicated Smart Routing Pool 10 IPS", ranges:[] },
+    { id:126, name:"TJ Marsé",                                      notes:"15 dedicated IPs Cluster IP: 199.244.73.230-244", ranges:["199.244.73.230-244"] },
+    { id:128, name:"EU Servesiclienti and Firma5",                  notes:"—", ranges:[] },
+    { id:132, name:"EU Abusers",                                    notes:"Account IP: 185.228.36.215-230 / Cluster IP: 185.228.36.215-230", ranges:["185.228.36.215-230"] },
+    { id:134, name:"New and Free EU",                               notes:"Account IP: 185.228.36.240-254 / Cluster IP: 185.228.36.240-254", ranges:["185.228.36.240-254"] },
+    { id:136, name:"Ded IP cluster info@mesajio.com",               notes:"—", ranges:[] },
+    { id:142, name:"Extra IP for: smithhs831@gmail.com",            notes:"—", ranges:[] },
   ];
 
   const ipToNum = ip => ip.split(".").reduce((acc,oct)=>(acc<<8)+parseInt(oct),0)>>>0;
@@ -442,7 +442,6 @@ export default function App() {
   const isValidIP=ip=>{const parts=ip.split(".");if(parts.length!==4)return false;return parts.every(p=>!isNaN(p)&&parseInt(p)>=0&&parseInt(p)<=255);};
   const handleIPSearch=()=>{const ip=ipSearch.trim();setIpSearched(ip);setIpResults(isValidIP(ip)?findClusters(ip):[]);};
   const filteredClusters=CLUSTERS.filter(c=>!browseSearch||c.id.toString().includes(browseSearch)||c.name.toLowerCase().includes(browseSearch.toLowerCase())||c.notes.toLowerCase().includes(browseSearch.toLowerCase())||c.ranges.some(r=>r.includes(browseSearch)));
-  const generateDemoData = async () => {
     const chg=["Rotated IPs","Cleared queue","Updated DNS","Restarted service","None"], nts=["All good","Monitoring","Escalated","Auto-resolved",""];
     const rows=[];
     for(let d=13;d>=0;d--){
@@ -1133,9 +1132,6 @@ export default function App() {
 
         {/* DEMO */}
         {tab===6 && (
-          <div style={{maxWidth:600,margin:'0 auto'}}>
-            <Card style={{marginBottom:16,padding:'20px 24px'}}>
-              <div style={{fontSize:16,fontWeight:500,color:'#1E293B',marginBottom:4}}>Demo Data</div>
               <div style={{fontSize:13,color:"#64748B",marginBottom:20,lineHeight:1.6}}>Generate realistic sample data to show your team how the tracker looks when fully in use. All demo records can be removed in one click.</div>
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
                 <div style={{background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
