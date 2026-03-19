@@ -309,6 +309,7 @@ export default function App() {
     { icon:"◷", label:"Past Logs" },
     { icon:"↗", label:"Reports" },
     { icon:"📅", label:"Monthly Tasks" },
+    { icon:"🔍", label:"IP Finder" },
     { icon:"🎯", label:"Demo" },
     ...(isAdmin ? [{ icon:"👤", label:"Users" }] : []),
   ];
@@ -994,11 +995,156 @@ export default function App() {
           );
         })()}
 
+        {/* IP FINDER */}
+        {tab===5 && (()=>{
+          const CLUSTERS = [
+            { id:2,   name:"Test",                                    notes:"Test cluster.", ranges:[] },
+            { id:3,   name:"Dedalus and Mediatech",                   notes:"Used for accounts antonio.fania@dedalus.eu and automail@mediatec.it to solve rate limit problems.", ranges:["185.228.36.6-15"] },
+            { id:5,   name:"Legacy Cluster — Stop Using",             notes:"Used for Non-EU who purchased Smart Routing. No new accounts added. Will be deleted soon.", ranges:[] },
+            { id:11,  name:"bbturbosmtp@pp-media.ch",                 notes:"1 Extra IP.", ranges:[] },
+            { id:15,  name:"Non-EU Basic — Spam Report / Listing History", notes:"Account IP: 199.187.175.35-254 / Cluster IP: 199.187.175.160-180 / Extendable to: 199.187.175.35-254", ranges:["199.187.175.35-254","199.187.175.160-180"] },
+            { id:17,  name:"EU PRO — Spam Report / Listing History",  notes:"Account IP: 5.83.159.1-254, 185.228.36.158-229 / Cluster IP: 185.228.36.92-156 / Extendable to: 185.228.36.215-239, 89.144.43.1-254", ranges:["5.83.159.1-254","185.228.36.158-229","185.228.36.92-156","185.228.36.215-239","89.144.43.1-254"] },
+            { id:21,  name:"Extremely High Complaint Rate",           notes:"Account IP: 199.187.172.33-69, 199.187.172.86-254 / Cluster IP: same ranges", ranges:["199.187.172.33-69","199.187.172.86-254"] },
+            { id:25,  name:"EU Basic Paid — Good Old",                notes:"Account IP: 185.228.36.17-22, 185.228.36.25-35 / Cluster IP: same / Extendable to: 185.228.36.36-69", ranges:["185.228.36.17-22","185.228.36.25-35","185.228.36.36-69"] },
+            { id:27,  name:"Non-EU Good Old",                         notes:"Account IP: 199.187.174.1-40 / Cluster IP: 199.187.174.1-40", ranges:["199.187.174.1-40"] },
+            { id:31,  name:"Non-EU Bad Old",                          notes:"Account IP: 199.187.174.41-127 / Cluster IP: 199.187.174.41-127", ranges:["199.187.174.41-127"] },
+            { id:33,  name:"Extra IP — tataaia.smtp@gc-solutions.net",notes:"Dedicated extra IP.", ranges:[] },
+            { id:35,  name:"Extra IP — info@artspr.gr",               notes:"Dedicated extra IP.", ranges:[] },
+            { id:43,  name:"T-online.de EU",                          notes:"Account IP: 185.228.36.0/22 / 89.144.43.0/24 / 5.83.159.0/24", ranges:["185.228.36.0/22","89.144.43.0/24","5.83.159.0/24"] },
+            { id:45,  name:"T-online.de 175 Range",                   notes:"Account IP: 199.187.175.0/24", ranges:["199.187.175.0/24"] },
+            { id:47,  name:"T-online.de Non-EU",                      notes:"Account IP: 199.187.172.0/24 / 199.187.173.0/24 / 199.187.174.0/24 / 199.244.72.0/24", ranges:["199.187.172.0/24","199.187.173.0/24","199.187.174.0/24","199.244.72.0/24"] },
+            { id:49,  name:"mkokash",                                 notes:"—", ranges:[] },
+            { id:51,  name:"Extra IP — info@bytesystem.it",           notes:"Extra IP.", ranges:[] },
+            { id:55,  name:"Extra IP — info@southwestfloridacopier.com", notes:"Extra IP.", ranges:[] },
+            { id:59,  name:"domenico.osto@regione.veneto.it",         notes:"2 dedicated IPs.", ranges:[] },
+            { id:74,  name:"EU Paid Bad Old",                         notes:"Account IP: 185.228.36.71-82 / Cluster IP: 185.228.36.71-99", ranges:["185.228.36.71-82","185.228.36.71-99"] },
+            { id:76,  name:"saad test",                               notes:"Test.", ranges:[] },
+            { id:78,  name:"jon@system-uk.com",                       notes:"1 Extra IP.", ranges:[] },
+            { id:88,  name:"Non-EU PRO",                              notes:"Account IP: 199.244.75.1-254 / Cluster IP: 199.244.73.30-254 / Extendable to: 199.187.174.128-245", ranges:["199.244.75.1-254","199.244.73.30-254","199.187.174.128-245"] },
+            { id:100, name:"Extra IP — h.haile@seocomplete.de",       notes:"Extra IP.", ranges:[] },
+            { id:102, name:"Extra IP — info@veriseo.de",              notes:"Extra IP.", ranges:[] },
+            { id:110, name:"Smart Routing V2.0 — Active",             notes:"Active smart routing pool.", ranges:[] },
+            { id:112, name:"Smart Routing V2.0 — Inactive",           notes:"Inactive smart routing pool.", ranges:[] },
+            { id:114, name:"Non-EU New and Free Accounts",            notes:"Account IP: 199.187.173.1-59 / Cluster IP: 199.187.173.1-59", ranges:["199.187.173.1-59"] },
+            { id:116, name:"Non-EU PRO with History",                 notes:"Account IP: 199.244.74.1-254 / Cluster IP: 199.244.72.10-254", ranges:["199.244.74.1-254","199.244.72.10-254"] },
+            { id:118, name:"EU PRO Accounts",                         notes:"Account IP: 185.228.38.1-254, 185.228.39.101-254 / Cluster IP: 185.228.37.91-254", ranges:["185.228.38.1-254","185.228.39.101-254","185.228.37.91-254"] },
+            { id:120, name:"Justin Movemedia",                        notes:"Dedicated Smart Routing Pool — 10 IPs.", ranges:[] },
+            { id:126, name:"TJ Marsé",                                notes:"15 dedicated IPs.", ranges:[] },
+            { id:128, name:"EU Servesiclienti and Firma5",            notes:"—", ranges:[] },
+            { id:132, name:"EU Abusers",                              notes:"Account IP: 185.228.36.215-230 / Cluster IP: 185.228.36.215-230", ranges:["185.228.36.215-230"] },
+            { id:134, name:"New and Free EU",                         notes:"Account IP: 185.228.36.240-254 / Cluster IP: 185.228.36.240-254", ranges:["185.228.36.240-254"] },
+            { id:136, name:"Dedicated IP — info@mesajio.com",         notes:"Dedicated IP cluster.", ranges:[] },
+            { id:142, name:"Extra IP — smithhs831@gmail.com",         notes:"Extra IP.", ranges:[] },
+          ];
+
+          const ipToNum = ip => ip.split(".").reduce((acc,oct)=>(acc<<8)+parseInt(oct),0)>>>0;
+          const parseRange = range => {
+            range=range.trim();
+            if(range.includes("/")){const[base,bits]=range.split("/");const mask=~((1<<(32-parseInt(bits)))-1)>>>0;const start=(ipToNum(base)&mask)>>>0;const end=(start|~mask)>>>0;return{start,end};}
+            else if(range.includes("-")){const parts=range.split("-");const lastOctetEnd=parseInt(parts[1]);if(isNaN(lastOctetEnd))return null;const baseOctets=parts[0].split(".");const startNum=ipToNum(parts[0]);const endIP=[...baseOctets.slice(0,3),lastOctetEnd].join(".");return{start:startNum,end:ipToNum(endIP)};}
+            return null;
+          };
+          const ipInRange=(ip,range)=>{try{const parsed=parseRange(range);if(!parsed)return false;const ipNum=ipToNum(ip);return ipNum>=parsed.start&&ipNum<=parsed.end;}catch{return false;}};
+          const findClusters=ip=>{const results=[];for(const cluster of CLUSTERS){for(const range of cluster.ranges){if(ipInRange(ip,range)){results.push({cluster,matchedRange:range});break;}}}return results;};
+          const isValidIP=ip=>{const parts=ip.split(".");if(parts.length!==4)return false;return parts.every(p=>!isNaN(p)&&parseInt(p)>=0&&parseInt(p)<=255);};
+
+          const [ipSearch, setIpSearch] = useState("");
+          const [ipResults, setIpResults] = useState(null);
+          const [ipSearched, setIpSearched] = useState("");
+          const [browseSearch, setBrowseSearch] = useState("");
+          const [ipTab, setIpTab] = useState("search");
+
+          const handleSearch = () => {
+            const ip = ipSearch.trim();
+            setIpSearched(ip);
+            setIpResults(isValidIP(ip) ? findClusters(ip) : []);
+          };
+
+          const filteredClusters = CLUSTERS.filter(c => !browseSearch || c.id.toString().includes(browseSearch) || c.name.toLowerCase().includes(browseSearch.toLowerCase()) || c.notes.toLowerCase().includes(browseSearch.toLowerCase()) || c.ranges.some(r=>r.includes(browseSearch)));
+
+          return (
+            <div>
+              <div style={{marginBottom:20}}>
+                <div style={{fontSize:16,fontWeight:500,color:"#1E293B",marginBottom:2}}>🔍 IP Cluster Finder</div>
+                <div style={{fontSize:12,color:"#94A3B8"}}>Enter an account IP to find its assigned cluster</div>
+              </div>
+
+              <div style={{display:"flex",gap:4,marginBottom:20,background:"#fff",border:"1px solid #E5E7EB",borderRadius:10,padding:4}}>
+                {[["search","🔍 IP Lookup"],["browse","📋 Browse All"]].map(([k,l])=>(
+                  <button key={k} onClick={()=>setIpTab(k)} style={{flex:1,padding:"8px 16px",borderRadius:8,fontSize:13,fontWeight:500,cursor:"pointer",border:"none",background:ipTab===k?"#1B3A6B":"transparent",color:ipTab===k?"#fff":"#64748B",transition:"all 0.15s"}}>{l}</button>
+                ))}
+              </div>
+
+              {ipTab==="search"&&(
+                <div>
+                  <Card style={{marginBottom:20}}>
+                    <label style={labelStyle}>Account IP Address</label>
+                    <div style={{display:"flex",gap:10,marginTop:4}}>
+                      <input type="text" placeholder="e.g. 185.228.36.10" value={ipSearch} onChange={e=>setIpSearch(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleSearch()} style={{...inputStyle,flex:1}}/>
+                      <button onClick={handleSearch} style={{padding:"7px 20px",borderRadius:8,background:"#1B3A6B",border:"none",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",flexShrink:0}}>Find</button>
+                    </div>
+                    {ipSearched&&!isValidIP(ipSearched)&&<div style={{marginTop:8,fontSize:12,color:"#B91C1C"}}>⚠ Please enter a valid IP address (e.g. 185.228.36.10)</div>}
+                  </Card>
+                  {ipResults!==null&&(
+                    <div>
+                      {ipResults.length===0&&isValidIP(ipSearched)&&(
+                        <Card style={{textAlign:"center",padding:"40px"}}>
+                          <div style={{fontSize:28,marginBottom:8}}>🔎</div>
+                          <div style={{fontSize:14,fontWeight:500,color:"#1E293B",marginBottom:4}}>No cluster found for {ipSearched}</div>
+                          <div style={{fontSize:12,color:"#94A3B8"}}>This IP is not assigned to any known cluster range</div>
+                        </Card>
+                      )}
+                      {ipResults.map(({cluster,matchedRange})=>(
+                        <Card key={cluster.id} style={{marginBottom:12,border:"2px solid #6366F1",padding:"18px 20px"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12,flexWrap:"wrap"}}>
+                            <div style={{background:"#EEF2FF",color:"#4F46E5",fontWeight:700,fontSize:16,borderRadius:10,padding:"6px 14px",flexShrink:0}}>#{cluster.id}</div>
+                            <div style={{flex:1}}>
+                              <div style={{fontSize:14,fontWeight:600,color:"#1E293B"}}>{cluster.name}</div>
+                              <div style={{fontSize:11,color:"#6366F1",marginTop:2}}>Matched: <span style={{fontFamily:"monospace",fontWeight:500}}>{matchedRange}</span></div>
+                            </div>
+                            <div style={{background:"#DCFCE7",color:"#166534",fontSize:11,fontWeight:600,padding:"4px 12px",borderRadius:20}}>✓ Match</div>
+                          </div>
+                          <div style={{background:"#F8FAFC",borderRadius:8,padding:"10px 14px",fontSize:13,color:"#475569",lineHeight:1.6,marginBottom:10}}>{cluster.notes}</div>
+                          {cluster.ranges.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                            {cluster.ranges.map((r,i)=><span key={i} style={{fontFamily:"monospace",fontSize:11,padding:"2px 8px",borderRadius:20,background:r===matchedRange?"#EEF2FF":"#F1F5F9",color:r===matchedRange?"#4F46E5":"#475569",border:`1px solid ${r===matchedRange?"#A5B4FC":"#E5E7EB"}`,fontWeight:r===matchedRange?600:400}}>{r}</span>)}
+                          </div>}
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {ipTab==="browse"&&(
+                <div>
+                  <div style={{background:"#fff",border:"1px solid #E5E7EB",borderRadius:10,padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
+                    <span style={{color:"#94A3B8"}}>🔍</span>
+                    <input type="text" placeholder="Search by ID, name, notes or IP range…" value={browseSearch} onChange={e=>setBrowseSearch(e.target.value)} style={{flex:1,border:"none",outline:"none",fontSize:13,color:"#1E293B"}}/>
+                    {browseSearch&&<button onClick={()=>setBrowseSearch("")} style={{border:"none",background:"none",color:"#94A3B8",cursor:"pointer",fontSize:16}}>×</button>}
+                  </div>
+                  <div style={{fontSize:11,color:"#94A3B8",marginBottom:12}}>{filteredClusters.length} clusters</div>
+                  {filteredClusters.map(cluster=>(
+                    <Card key={cluster.id} style={{marginBottom:8,padding:"12px 16px"}}>
+                      <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
+                        <div style={{background:"#F1F5F9",color:"#475569",fontWeight:700,fontSize:12,borderRadius:8,padding:"4px 10px",flexShrink:0,minWidth:36,textAlign:"center"}}>#{cluster.id}</div>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:13,fontWeight:500,color:"#1E293B",marginBottom:4}}>{cluster.name}</div>
+                          <div style={{fontSize:12,color:"#64748B",lineHeight:1.5,marginBottom:cluster.ranges.length?8:0}}>{cluster.notes}</div>
+                          {cluster.ranges.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                            {cluster.ranges.map((r,i)=><span key={i} style={{fontFamily:"monospace",fontSize:11,padding:"2px 8px",borderRadius:20,background:"#EFF6FF",color:"#1D4ED8",border:"1px solid #BFDBFE"}}>{r}</span>)}
+                          </div>}
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* DEMO */}
-        {tab===5 && (
-          <div style={{maxWidth:600,margin:"0 auto"}}>
-            <Card style={{marginBottom:16,padding:"20px 24px"}}>
-              <div style={{fontSize:16,fontWeight:500,color:"#1E293B",marginBottom:4}}>🎯 Demo Data</div>
+        {tab===6 && (
               <div style={{fontSize:13,color:"#64748B",marginBottom:20,lineHeight:1.6}}>Generate realistic sample data to show your team how the tracker looks when fully in use. All demo records can be removed in one click.</div>
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
                 <div style={{background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
@@ -1023,7 +1169,7 @@ export default function App() {
         )}
 
         {/* USERS - Admin only */}
-        {tab===6 && isAdmin && <AdminPanel currentUser={currentUser}/>}
+        {tab===7 && isAdmin && <AdminPanel currentUser={currentUser}/>}
 
       </div>
     </div>
