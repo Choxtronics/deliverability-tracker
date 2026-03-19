@@ -442,7 +442,6 @@ export default function App() {
   const isValidIP=ip=>{const parts=ip.split(".");if(parts.length!==4)return false;return parts.every(p=>!isNaN(p)&&parseInt(p)>=0&&parseInt(p)<=255);};
   const handleIPSearch=()=>{const ip=ipSearch.trim();setIpSearched(ip);setIpResults(isValidIP(ip)?findClusters(ip):[]);};
   const filteredClusters=CLUSTERS.filter(c=>!browseSearch||c.id.toString().includes(browseSearch)||c.name.toLowerCase().includes(browseSearch.toLowerCase())||c.notes.toLowerCase().includes(browseSearch.toLowerCase())||c.ranges.some(r=>r.includes(browseSearch)));
-  const generateDemoData = async () => {
     const chg=["Rotated IPs","Cleared queue","Updated DNS","Restarted service","None"], nts=["All good","Monitoring","Escalated","Auto-resolved",""];
     const rows=[];
     for(let d=13;d>=0;d--){
@@ -567,13 +566,7 @@ export default function App() {
                 </div>
               </div>;
             })}
-            <div style={{display:"flex",gap:6,alignItems:"center",background:"#243F72",border:"1px solid #2E5096",borderRadius:10,padding:"6px 12px"}}>
-              <Avatar name={isAdmin?"Ad":activeWorker} size={26}/>
-              <div>
-                <div style={{fontSize:12,fontWeight:500,color:"#F1F5F9"}}>{isAdmin?"Admin":activeWorker}</div>
-                <div style={{fontSize:10,color:"#93C5FD"}}>{isAdmin?"Full access":"Worker"}</div>
-              </div>
-            </div>
+
             <button onClick={loadAll} style={{padding:"6px 12px",borderRadius:8,border:"1px solid #2E5096",background:"#243F72",color:"#93C5FD",fontSize:12,cursor:"pointer",fontWeight:500}}>↻ Refresh</button>
 
             <button onClick={()=>setCurrentUser(null)} style={{padding:"6px 12px",borderRadius:8,border:"1px solid #2E5096",background:"#243F72",color:"#F87171",fontSize:12,cursor:"pointer",fontWeight:500}}>⎋ Logout</button>
@@ -1133,9 +1126,6 @@ export default function App() {
 
         {/* DEMO */}
         {tab===6 && (
-          <div style={{maxWidth:600,margin:"0 auto"}}>
-            <Card style={{marginBottom:16,padding:"20px 24px"}}>
-              <div style={{fontSize:16,fontWeight:500,color:"#1E293B",marginBottom:4}}>Demo Data</div>
               <div style={{fontSize:13,color:"#64748B",marginBottom:20,lineHeight:1.6}}>Generate realistic sample data to show your team how the tracker looks when fully in use. All demo records can be removed in one click.</div>
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
                 <div style={{background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
