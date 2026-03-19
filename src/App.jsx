@@ -1171,7 +1171,7 @@ export default function App() {
           </div>
         )}
 
-                {/* USERS - Admin only */}
+        {/* USERS - Admin only */}
         {tab===6 && isAdmin && <AdminPanel currentUser={currentUser}/>}
 
       </div>
