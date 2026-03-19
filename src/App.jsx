@@ -302,9 +302,9 @@ export default function App() {
   );
 
   return (
-    <div style={{minHeight:"100vh",background:"#F8FAFC",fontFamily:"system-ui,sans-serif"}}>
+    <div style={{minHeight:"100vh",width:"100vw",overflowX:"hidden",background:"#F8FAFC",fontFamily:"system-ui,sans-serif"}}>
       {/* Header */}
-      <div style={{background:"#1B3A6B",padding:"0 24px"}}>
+      <div style={{background:"#1B3A6B",padding:"0 24px",width:"100%",boxSizing:"border-box"}}>
         <div style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12,paddingTop:16,paddingBottom:16}}>
           <div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
