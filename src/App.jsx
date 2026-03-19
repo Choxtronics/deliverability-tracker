@@ -130,9 +130,6 @@ export default function App() {
   // Load all data from Supabase on mount
   useEffect(() => {
     loadAll();
-    // Poll for updates every 30 seconds
-    const interval = setInterval(loadAll, 30000);
-    return () => clearInterval(interval);
   }, []);
 
   const loadAll = async () => {
