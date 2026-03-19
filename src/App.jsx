@@ -48,14 +48,6 @@ const UPDATE_STATUS_META = {
   "Reverted":        { bg:"#FEF2F2", text:"#B91C1C", dot:"#EF4444" },
   "Pending Results": { bg:"#FFFBEB", text:"#B45309", dot:"#F59E0B" },
 };
-const TABS = [
-  { icon:"▦", label:"Task Board" },
-  { icon:"⚗", label:"Cluster Updates" },
-  { icon:"◷", label:"Past Logs" },
-  { icon:"↗", label:"Reports" },
-  { icon:"📅", label:"Monthly Tasks" },
-  { icon:"🎯", label:"Demo" },
-];
 const MONTHLY_TASKS = [
   { id:"m1", name:"Tracking Links Management",      desc:"Review and update all tracking links across platforms. Check for broken or blacklisted domains." },
   { id:"m2", name:"Bounce & Defer Errors Updating", desc:"Update bounce and deferral error rules. Review new error codes and adjust suppression logic." },
@@ -74,7 +66,7 @@ const downloadCSV = (filename,rows) => { const escape=v=>`"${String(v??'').repla
 const blankForm = () => Object.fromEntries(TASKS.map(t=>[t.id,{status:"—",changes:"",notes:""}]));
 const blankUpdate = () => ({type:"Update",worker:WORKERS[0],title:"",description:"",result:"",status:"Ongoing",ipChangeType:"— None —",ipOther:"",ipDetail:"",ipRange:"",ipReason:"",ipResult:"",extraIPs:[]});
 
-const Avatar = ({name,size=32}) => { const c=wc(name); return <div style={{width:size,height:size,borderRadius:"50%",background:c.bg,color:c.text,display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.38,fontWeight:500,flexShrink:0}}>{name[0]}</div>; };
+const Avatar = ({name,size=32}) => { const c=wc(name); return <div style={{width:size,height:size,borderRadius:"50%",background:c.bg,color:c.text,display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.38,fontWeight:500,flexShrink:0}}>{name?name[0]:"A"}</div>; };
 const Pill = ({label,bg,text,style={}}) => <span style={{display:"inline-flex",alignItems:"center",fontSize:11,fontWeight:500,padding:"2px 8px",borderRadius:20,background:bg,color:text,...style}}>{label}</span>;
 const Btn = ({onClick,children,variant="ghost",disabled,style={}}) => {
   const base={padding:"6px 14px",borderRadius:8,fontSize:13,fontWeight:500,cursor:disabled?"not-allowed":"pointer",border:"1px solid",transition:"opacity 0.15s",opacity:disabled?0.4:1,...style};
@@ -90,36 +82,194 @@ const SectionHeader = ({cat}) => (
   </div>
 );
 
-export default function App() {
-  const [entries, setEntries]       = useState([]);
-  const [updates, setUpdates]       = useState([]);
-  const [monthlyLogs, setMonthlyLogs] = useState([]);
+// ── LOGIN PAGE ──
+function LoginPage({ onLogin }) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError]       = useState("");
+  const [loading, setLoading]   = useState(false);
+
+  const handleLogin = async () => {
+    if (!username.trim() || !password.trim()) { setError("Please enter username and password."); return; }
+    setLoading(true); setError("");
+    const { data, error: err } = await supabase.from("users").select("*").eq("username", username.trim().toLowerCase()).eq("password", password.trim()).single();
+    setLoading(false);
+    if (err || !data) { setError("Incorrect username or password."); return; }
+    onLogin(data);
+  };
+
+  const inputStyle = {padding:"10px 14px",borderRadius:10,border:"1px solid #E5E7EB",fontSize:14,width:"100%",boxSizing:"border-box",outline:"none",color:"#1E293B"};
+
+  return (
+    <div style={{minHeight:"100vh",background:"#F8FAFC",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"system-ui,sans-serif"}}>
+      <div style={{width:"100%",maxWidth:380,padding:"0 16px"}}>
+        <div style={{textAlign:"center",marginBottom:32}}>
+          <div style={{fontSize:32,marginBottom:8}}>📬</div>
+          <div style={{fontSize:22,fontWeight:600,color:"#1E293B"}}>Deliverability Tracker</div>
+          <div style={{fontSize:13,color:"#94A3B8",marginTop:4}}>Sign in to continue</div>
+        </div>
+        <Card style={{padding:"28px 28px"}}>
+          <div style={{marginBottom:16}}>
+            <label style={{fontSize:11,color:"#94A3B8",fontWeight:500,marginBottom:6,display:"block",textTransform:"uppercase",letterSpacing:"0.05em"}}>Username</label>
+            <input type="text" placeholder="Enter your username" value={username} onChange={e=>setUsername(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleLogin()} style={inputStyle}/>
+          </div>
+          <div style={{marginBottom:20}}>
+            <label style={{fontSize:11,color:"#94A3B8",fontWeight:500,marginBottom:6,display:"block",textTransform:"uppercase",letterSpacing:"0.05em"}}>Password</label>
+            <input type="password" placeholder="Enter your password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleLogin()} style={inputStyle}/>
+          </div>
+          {error && <div style={{fontSize:12,color:"#B91C1C",background:"#FEF2F2",border:"1px solid #FCA5A5",borderRadius:8,padding:"8px 12px",marginBottom:16}}>{error}</div>}
+          <button onClick={handleLogin} disabled={loading} style={{width:"100%",padding:"11px",borderRadius:10,background:"#1B3A6B",border:"none",color:"#fff",fontSize:14,fontWeight:600,cursor:loading?"not-allowed":"pointer",opacity:loading?0.7:1}}>
+            {loading ? "Signing in…" : "Sign in"}
+          </button>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ── ADMIN PANEL ──
+function AdminPanel({ currentUser }) {
+  const [users, setUsers]           = useState([]);
   const [loading, setLoading]       = useState(true);
-  const [tab, setTab]               = useState(0);
-  const [activeWorker, setActiveWorker] = useState(WORKERS[0]);
-  const [form, setForm]             = useState(blankForm);
-  const [savedIds, setSavedIds]     = useState({});
+  const [showForm, setShowForm]     = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [form, setForm]             = useState({ username:"", password:"", role:"worker", worker_name:"" });
+  const [msg, setMsg]               = useState("");
+
+  const loadUsers = async () => {
+    setLoading(true);
+    const { data } = await supabase.from("users").select("*").order("created_at");
+    if (data) setUsers(data);
+    setLoading(false);
+  };
+
+  useEffect(() => { loadUsers(); }, []);
+
+  const saveUser = async () => {
+    if (!form.username.trim() || !form.password.trim()) { setMsg("Username and password are required."); return; }
+    if (form.role === "worker" && !form.worker_name) { setMsg("Please select a worker name."); return; }
+    const row = { username: form.username.trim().toLowerCase(), password: form.password.trim(), role: form.role, worker_name: form.role === "admin" ? null : form.worker_name };
+    if (editingUser) {
+      await supabase.from("users").update(row).eq("id", editingUser.id);
+      setMsg("User updated successfully!");
+    } else {
+      await supabase.from("users").insert({ ...row, id: genId() });
+      setMsg("User created successfully!");
+    }
+    setForm({ username:"", password:"", role:"worker", worker_name:"" });
+    setShowForm(false); setEditingUser(null);
+    loadUsers();
+    setTimeout(() => setMsg(""), 3000);
+  };
+
+  const deleteUser = async (id) => {
+    if (id === currentUser.id) { setMsg("You can't delete your own account!"); setTimeout(()=>setMsg(""),3000); return; }
+    if (!window.confirm("Delete this user?")) return;
+    await supabase.from("users").delete().eq("id", id);
+    loadUsers();
+  };
+
+  const inputStyle = {padding:"7px 11px",borderRadius:8,border:"1px solid #E5E7EB",fontSize:13,background:"#fff",color:"#1E293B",width:"100%",boxSizing:"border-box"};
+  const labelStyle = {fontSize:11,color:"#94A3B8",fontWeight:500,marginBottom:4,display:"block",textTransform:"uppercase",letterSpacing:"0.05em"};
+
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
+        <div>
+          <div style={{fontSize:16,fontWeight:500,color:"#1E293B"}}>User Management</div>
+          <div style={{fontSize:12,color:"#94A3B8",marginTop:2}}>Create and manage worker and admin accounts</div>
+        </div>
+        <Btn variant="primary" onClick={()=>{ setShowForm(true); setEditingUser(null); setForm({username:"",password:"",role:"worker",worker_name:""}); }}>+ New user</Btn>
+      </div>
+
+      {msg && <div style={{fontSize:12,color:"#166534",background:"#DCFCE7",border:"1px solid #BBF7D0",borderRadius:8,padding:"8px 12px",marginBottom:12}}>{msg}</div>}
+
+      {showForm && (
+        <Card style={{marginBottom:16,border:"1.5px solid #E0E7FF"}}>
+          <div style={{fontSize:14,fontWeight:500,color:"#1E293B",marginBottom:14}}>{editingUser?"Edit user":"New user"}</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:12}}>
+            <div><label style={labelStyle}>Username</label><input type="text" placeholder="e.g. ahmed" value={form.username} onChange={e=>setForm(f=>({...f,username:e.target.value}))} style={inputStyle}/></div>
+            <div><label style={labelStyle}>Password</label><input type="text" placeholder="Set a password" value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))} style={inputStyle}/></div>
+            <div><label style={labelStyle}>Role</label>
+              <select value={form.role} onChange={e=>setForm(f=>({...f,role:e.target.value,worker_name:""}))} style={inputStyle}>
+                <option value="worker">Worker</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            {form.role==="worker" && <div><label style={labelStyle}>Worker name</label>
+              <select value={form.worker_name} onChange={e=>setForm(f=>({...f,worker_name:e.target.value}))} style={inputStyle}>
+                <option value="">Select worker…</option>
+                {WORKERS.map(w=><option key={w}>{w}</option>)}
+              </select>
+            </div>}
+          </div>
+          <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+            <Btn onClick={()=>{setShowForm(false);setEditingUser(null);}}>Cancel</Btn>
+            <Btn variant="primary" onClick={saveUser}>{editingUser?"Save changes":"Create user"}</Btn>
+          </div>
+        </Card>
+      )}
+
+      {loading ? <div style={{textAlign:"center",padding:40,color:"#94A3B8"}}>Loading…</div> : (
+        <Card style={{padding:0,overflow:"hidden"}}>
+          <table style={{width:"100%",fontSize:13,borderCollapse:"collapse"}}>
+            <thead><tr style={{background:"#F8FAFC"}}>
+              {["Username","Role","Worker","Password","Actions"].map(h=><th key={h} style={{padding:"10px 16px",textAlign:"left",fontWeight:500,color:"#94A3B8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.05em"}}>{h}</th>)}
+            </tr></thead>
+            <tbody>
+              {users.map(u=>(
+                <tr key={u.id} style={{borderTop:"1px solid #F8FAFC"}}>
+                  <td style={{padding:"10px 16px",fontWeight:500,color:"#1E293B"}}>{u.username}</td>
+                  <td style={{padding:"10px 16px"}}><Pill label={u.role} bg={u.role==="admin"?"#EDE9FE":"#DBEAFE"} text={u.role==="admin"?"#5B21B6":"#1D4ED8"}/></td>
+                  <td style={{padding:"10px 16px",color:"#64748B"}}>{u.worker_name||"—"}</td>
+                  <td style={{padding:"10px 16px",color:"#94A3B8",fontFamily:"monospace"}}>{u.password}</td>
+                  <td style={{padding:"10px 16px"}}>
+                    <div style={{display:"flex",gap:6}}>
+                      <button onClick={()=>{ setEditingUser(u); setForm({username:u.username,password:u.password,role:u.role,worker_name:u.worker_name||""}); setShowForm(true); }} style={{fontSize:11,padding:"3px 10px",borderRadius:20,border:"1px solid #E5E7EB",background:"transparent",color:"#475569",cursor:"pointer"}}>✎ Edit</button>
+                      <button onClick={()=>deleteUser(u.id)} style={{fontSize:11,padding:"3px 10px",borderRadius:20,border:"1px solid #FCA5A5",background:"#FEF2F2",color:"#B91C1C",cursor:"pointer"}}>✕ Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ── MAIN APP ──
+export default function App() {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [entries, setEntries]         = useState([]);
+  const [updates, setUpdates]         = useState([]);
+  const [monthlyLogs, setMonthlyLogs] = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [tab, setTab]                 = useState(0);
+  const [form, setForm]               = useState(blankForm);
+  const [savedIds, setSavedIds]       = useState({});
   const [expandedTask, setExpandedTask] = useState(null);
-  const [logDate, setLogDate]       = useState(todayStr());
-  const [logDateTo, setLogDateTo]   = useState(todayStr());
+  const [logDate, setLogDate]         = useState(todayStr());
+  const [logDateTo, setLogDateTo]     = useState(todayStr());
   const [logRangeMode, setLogRangeMode] = useState(false);
-  const [logWorker, setLogWorker]   = useState("All");
-  const [logPage, setLogPage]       = useState(0);
+  const [logWorker, setLogWorker]     = useState("All");
+  const [logPage, setLogPage]         = useState(0);
   const [expandedLogEntry, setExpandedLogEntry] = useState(null);
-  const [rFrom, setRFrom]           = useState(todayStr());
-  const [rTo, setRTo]               = useState(todayStr());
-  const [rWorker, setRWorker]       = useState("All");
-  const [rPreset, setRPreset]       = useState("today");
-  const [rView, setRView]           = useState("summary");
-  const [updateForm, setUpdateForm] = useState(blankUpdate());
+  const [rFrom, setRFrom]             = useState(todayStr());
+  const [rTo, setRTo]                 = useState(todayStr());
+  const [rWorker, setRWorker]         = useState("All");
+  const [rPreset, setRPreset]         = useState("today");
+  const [rView, setRView]             = useState("summary");
+  const [updateForm, setUpdateForm]   = useState(blankUpdate());
   const [showUpdateForm, setShowUpdateForm] = useState(false);
-  const [filterUW, setFilterUW]     = useState("All");
-  const [filterUT, setFilterUT]     = useState("All");
-  const [filterUS, setFilterUS]     = useState("All");
-  const [filterUIP, setFilterUIP]   = useState("All");
+  const [filterUW, setFilterUW]       = useState("All");
+  const [filterUT, setFilterUT]       = useState("All");
+  const [filterUS, setFilterUS]       = useState("All");
+  const [filterUIP, setFilterUIP]     = useState("All");
   const [filterUClusterText, setFilterUClusterText] = useState("");
   const [filterUFrom, setFilterUFrom] = useState("");
-  const [filterUTo, setFilterUTo]   = useState("");
+  const [filterUTo, setFilterUTo]     = useState("");
   const [filterUPreset, setFilterUPreset] = useState("all");
   const [expandedUpdate, setExpandedUpdate] = useState(null);
   const [editingUpdate, setEditingUpdate]   = useState(null);
@@ -128,10 +278,21 @@ export default function App() {
   const [monthlyOpen, setMonthlyOpen] = useState({});
   const [monthlyFields, setMonthlyFields] = useState({});
 
-  // Load all data from Supabase on mount
-  useEffect(() => {
-    loadAll();
-  }, []);
+  const isAdmin = currentUser?.role === "admin";
+  const activeWorker = currentUser?.worker_name || null;
+
+  const TABS = [
+    { icon:"▦", label:"Task Board" },
+    { icon:"⚗", label:"Cluster Updates" },
+    { icon:"◷", label:"Past Logs" },
+    { icon:"↗", label:"Reports" },
+    { icon:"📅", label:"Monthly Tasks" },
+    { icon:"🎯", label:"Demo" },
+    ...(isAdmin ? [{ icon:"👤", label:"Users" }] : []),
+  ];
+
+  useEffect(() => { if (currentUser) { loadAll(); setForm(blankForm()); setSavedIds({}); } }, [currentUser]);
+  useEffect(() => { setLogPage(0); }, [logDate, logDateTo, logRangeMode, logWorker]);
 
   const loadAll = async () => {
     setLoading(true);
@@ -146,14 +307,13 @@ export default function App() {
     setLoading(false);
   };
 
-  useEffect(() => { setForm(blankForm()); setSavedIds({}); }, [activeWorker]);
-  useEffect(() => { setLogPage(0); }, [logDate, logDateTo, logRangeMode, logWorker]);
-
   const todayEntries = entries.filter(e => e.date === todayStr());
   const latestToday = {};
   todayEntries.forEach(e => { latestToday[`${e.worker}|${e.taskId}`] = e; });
 
   const logFrom = logDate, logTo = logRangeMode ? logDateTo : logDate;
+
+  const canEdit = (entryWorker) => isAdmin || entryWorker === activeWorker;
 
   const saveEntry = async taskId => {
     const f = form[taskId];
@@ -170,7 +330,8 @@ export default function App() {
       await supabase.from("updates").update({ type:updateForm.type, worker:updateForm.worker, title:updateForm.title, description:updateForm.description, result:updateForm.result, status:updateForm.status, ip_change_type:updateForm.ipChangeType, ip_other:updateForm.ipOther, ip_detail:updateForm.ipDetail, ip_range:updateForm.ipRange, ip_reason:updateForm.ipReason, ip_result:updateForm.ipResult, extra_ips:updateForm.extraIPs, edited_ts:new Date().toISOString() }).eq("id", editingUpdate);
       setEditingUpdate(null);
     } else {
-      const row = { id:genId(), type:updateForm.type, worker:updateForm.worker, title:updateForm.title, description:updateForm.description, result:updateForm.result, status:updateForm.status, ip_change_type:updateForm.ipChangeType, ip_other:updateForm.ipOther, ip_detail:updateForm.ipDetail, ip_range:updateForm.ipRange, ip_reason:updateForm.ipReason, ip_result:updateForm.ipResult, extra_ips:updateForm.extraIPs, replies:[], ts:new Date().toISOString() };
+      const worker = isAdmin ? updateForm.worker : activeWorker;
+      const row = { id:genId(), type:updateForm.type, worker, title:updateForm.title, description:updateForm.description, result:updateForm.result, status:updateForm.status, ip_change_type:updateForm.ipChangeType, ip_other:updateForm.ipOther, ip_detail:updateForm.ipDetail, ip_range:updateForm.ipRange, ip_reason:updateForm.ipReason, ip_result:updateForm.ipResult, extra_ips:updateForm.extraIPs, replies:[], ts:new Date().toISOString() };
       await supabase.from("updates").insert(row);
     }
     setUpdateForm(blankUpdate()); setShowUpdateForm(false); loadAll();
@@ -179,7 +340,8 @@ export default function App() {
   const addReply = async (uid, text, worker) => {
     if (!text.trim()) return;
     const u = updates.find(x => x.id === uid);
-    const newReplies = [...(u.replies || []), { id:genId(), worker, text, ts:new Date().toISOString() }];
+    const replyWorker = isAdmin ? worker : activeWorker;
+    const newReplies = [...(u.replies || []), { id:genId(), worker:replyWorker, text, ts:new Date().toISOString() }];
     await supabase.from("updates").update({ replies: newReplies }).eq("id", uid);
     loadAll();
   };
@@ -194,11 +356,8 @@ export default function App() {
     const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
     const existing = monthlyLogs.find(r => r.month === month && r.task_id === taskId && r.worker === worker);
     const row = { month, task_id:taskId, worker, status:fields.status, notes:fields.notes, ts:new Date().toISOString() };
-    if (existing) {
-      await supabase.from("monthly_logs").update(row).eq("id", existing.id);
-    } else {
-      await supabase.from("monthly_logs").insert({ ...row, id:genId() });
-    }
+    if (existing) { await supabase.from("monthly_logs").update(row).eq("id", existing.id); }
+    else { await supabase.from("monthly_logs").insert({ ...row, id:genId() }); }
     loadAll();
   };
 
@@ -212,41 +371,34 @@ export default function App() {
         rows.push({id:"DEMO_"+genId(),date:ds,worker,task_id:task.id,status:"OK",changes:chg[Math.floor(Math.random()*chg.length)],notes:nts[Math.floor(Math.random()*nts.length)],ts:ts.toISOString()});
       });});
     }
-    await supabase.from("entries").insert(rows);
-    loadAll();
+    await supabase.from("entries").insert(rows); loadAll();
   };
 
   const generateDemoUpdates = async () => {
     const samples=[
       {type:"Experiment",worker:"Federico",title:"Testing IP warm-up on Cluster 4",description:"Started a gradual warm-up plan on Cluster 4 increasing daily send volume by 10% each day.",result:"After 5 days, bounce rate dropped from 6.2% to 3.8%.",status:"Ongoing",ip_change_type:"Added IPs",ip_detail:"Cluster 4",ip_range:"185.228.38.1-20",ip_reason:"Warm-up plan",ip_result:"Bounce improving",extra_ips:[],replies:[]},
-      {type:"Change",worker:"Ahmed",title:"Switched tracking domain for EmailChef",description:"Replaced old tracking domain with a clean domain. Old domain had SURBL blacklist hits.",result:"No blacklist issues after 3 days.",status:"Completed",ip_change_type:"— None —",ip_detail:"",ip_range:"",ip_reason:"",ip_result:"",extra_ips:[],replies:[]},
-      {type:"Fix",worker:"Mai",title:"Resolved queue buildup on Outside Cluster 2",description:"Cluster 2 had stuck queue due to misconfigured retry interval. Flushed 1,200 queued messages.",result:"Queue cleared within 20 minutes.",status:"Completed",ip_change_type:"Removed IPs",ip_detail:"Cluster 2",ip_range:"185.228.36.70-75",ip_reason:"Stuck queue / retry misconfiguration",ip_result:"Queue cleared, normal delivery resumed",extra_ips:[],replies:[]},
-      {type:"Observation",worker:"Khaled",title:"Spike in MS 550 5.7.1 errors Monday mornings",description:"Microsoft bounce errors spike every Monday 08:00–10:00 UTC. Possibly related to weekend queue flushing.",result:"Still investigating.",status:"Ongoing",ip_change_type:"Changed Snooze Time",ip_detail:"Cluster 21",ip_range:"199.187.172.33-69",ip_reason:"High MS complaint rate on Mondays",ip_result:"Snooze extended to 6h on weekends",extra_ips:[],replies:[]},
-      {type:"Experiment",worker:"Federico",title:"Cluster assignment by domain reputation",description:"Testing new assignment logic routing basic accounts to clusters based on domain reputation score.",result:"12% reduction in cross-contamination bounce events.",status:"Pending Results",ip_change_type:"Added IPs",ip_detail:"Cluster 140",ip_range:"185.228.39.100-150",ip_reason:"Need isolated pool for reputation-based routing",ip_result:"Cluster created and accounts being migrated",extra_ips:[],replies:[]},
+      {type:"Change",worker:"Ahmed",title:"Switched tracking domain for EmailChef",description:"Replaced old tracking domain with a clean domain.",result:"No blacklist issues after 3 days.",status:"Completed",ip_change_type:"— None —",ip_detail:"",ip_range:"",ip_reason:"",ip_result:"",extra_ips:[],replies:[]},
+      {type:"Fix",worker:"Mai",title:"Resolved queue buildup on Outside Cluster 2",description:"Cluster 2 had stuck queue due to misconfigured retry interval.",result:"Queue cleared within 20 minutes.",status:"Completed",ip_change_type:"Removed IPs",ip_detail:"Cluster 2",ip_range:"185.228.36.70-75",ip_reason:"Stuck queue",ip_result:"Queue cleared",extra_ips:[],replies:[]},
+      {type:"Observation",worker:"Khaled",title:"Spike in MS 550 5.7.1 errors Monday mornings",description:"Microsoft bounce errors spike every Monday 08:00–10:00 UTC.",result:"Still investigating.",status:"Ongoing",ip_change_type:"Changed Snooze Time",ip_detail:"Cluster 21",ip_range:"199.187.172.33-69",ip_reason:"High MS complaint rate",ip_result:"Snooze extended to 6h",extra_ips:[],replies:[]},
     ];
     const now=Date.now();
     const rows=samples.map((s,i)=>({...s,id:"DEMO_"+genId(),ts:new Date(now-(samples.length-i)*14*60*60*1000).toISOString()}));
-    await supabase.from("updates").insert(rows);
-    loadAll();
+    await supabase.from("updates").insert(rows); loadAll();
   };
 
   const generateDemoMonthly = async () => {
     const now = new Date();
     const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
     const statuses = ["Done","In Progress","Pending","Done"];
-    const notes = ["Completed and verified","Currently working on it","","All links updated and tested"];
+    const notes = ["Completed and verified","Currently working on it","","All links updated"];
     const rows=[];
     MONTHLY_TASKS.forEach((task,ti)=>{
       WORKERS.forEach((worker,wi)=>{
         const existing = monthlyLogs.find(r=>r.month===month&&r.task_id===task.id&&r.worker===worker);
-        if(!existing){
-          const s=statuses[(ti+wi)%statuses.length];
-          rows.push({id:"DEMO_"+genId(),month,task_id:task.id,worker,status:s,notes:notes[(ti+wi)%notes.length],ts:new Date().toISOString()});
-        }
+        if(!existing){ rows.push({id:"DEMO_"+genId(),month,task_id:task.id,worker,status:statuses[(ti+wi)%statuses.length],notes:notes[(ti+wi)%notes.length],ts:new Date().toISOString()}); }
       });
     });
-    if(rows.length) await supabase.from("monthly_logs").insert(rows);
-    loadAll();
+    if(rows.length) await supabase.from("monthly_logs").insert(rows); loadAll();
   };
 
   const clearDemoData = async () => {
@@ -292,20 +444,19 @@ export default function App() {
   const selectStyle = {...inputStyle};
   const labelStyle = {fontSize:11,color:"#94A3B8",fontWeight:500,marginBottom:4,display:"block",textTransform:"uppercase",letterSpacing:"0.05em"};
 
+  if (!currentUser) return <LoginPage onLogin={setCurrentUser}/>;
+
   if (loading) return (
     <div style={{minHeight:"100vh",background:"#F8FAFC",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"system-ui,sans-serif"}}>
-      <div style={{textAlign:"center"}}>
-        <div style={{fontSize:32,marginBottom:12}}>📬</div>
-        <div style={{fontSize:14,color:"#64748B"}}>Loading Deliverability Tracker…</div>
-      </div>
+      <div style={{textAlign:"center"}}><div style={{fontSize:32,marginBottom:12}}>📬</div><div style={{fontSize:14,color:"#64748B"}}>Loading…</div></div>
     </div>
   );
 
   return (
-    <div style={{minHeight:"100vh",width:"100vw",overflowX:"hidden",background:"#F8FAFC",fontFamily:"system-ui,sans-serif"}}>
+    <div style={{minHeight:"100vh",background:"#F8FAFC",fontFamily:"system-ui,sans-serif"}}>
       {/* Header */}
-      <div style={{background:"#1B3A6B",padding:"0 24px",width:"100%",boxSizing:"border-box"}}>
-        <div style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12,paddingTop:16,paddingBottom:16}}>
+      <div style={{background:"#1B3A6B",padding:"0 24px"}}>
+        <div style={{maxWidth:1100,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12,paddingTop:16,paddingBottom:16}}>
           <div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <span style={{fontSize:18,fontWeight:500,color:"#F1F5F9"}}>Deliverability Tracker</span>
@@ -313,7 +464,7 @@ export default function App() {
             </div>
             <div style={{fontSize:12,color:"#93B4D8",marginTop:2,fontWeight:500}}>{fmtFull(todayStr())}</div>
           </div>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
             {WORKERS.map(w=>{ const c=wc(w); const done=new Set(todayEntries.filter(e=>e.worker===w).map(e=>e.taskId)).size; const pct=Math.round((done/TASKS.length)*100);
               return <div key={w} style={{display:"flex",alignItems:"center",gap:8,background:"#243F72",border:"1px solid #2E5096",borderRadius:10,padding:"6px 12px"}}>
                 <Avatar name={w} size={26}/>
@@ -328,33 +479,43 @@ export default function App() {
                 </div>
               </div>;
             })}
+            <div style={{display:"flex",gap:6,alignItems:"center",background:"#243F72",border:"1px solid #2E5096",borderRadius:10,padding:"6px 12px"}}>
+              <Avatar name={isAdmin?"Ad":activeWorker} size={26}/>
+              <div>
+                <div style={{fontSize:12,fontWeight:500,color:"#F1F5F9"}}>{isAdmin?"Admin":activeWorker}</div>
+                <div style={{fontSize:10,color:"#93C5FD"}}>{isAdmin?"Full access":"Worker"}</div>
+              </div>
+            </div>
             <button onClick={loadAll} style={{padding:"6px 12px",borderRadius:8,border:"1px solid #2E5096",background:"#243F72",color:"#93C5FD",fontSize:12,cursor:"pointer",fontWeight:500}}>↻ Refresh</button>
+            <button onClick={()=>setCurrentUser(null)} style={{padding:"6px 12px",borderRadius:8,border:"1px solid #2E5096",background:"#243F72",color:"#F87171",fontSize:12,cursor:"pointer",fontWeight:500}}>⎋ Logout</button>
           </div>
         </div>
-        <div style={{width:"100%",display:"flex",gap:2}}>
+        <div style={{maxWidth:1100,margin:"0 auto",display:"flex",gap:2,flexWrap:"wrap"}}>
           {TABS.map((t,i)=><button key={i} onClick={()=>setTab(i)} style={{padding:"10px 20px",fontSize:14,fontWeight:500,color:tab===i?"#fff":"#93B4D8",background:tab===i?"rgba(255,255,255,0.12)":"transparent",border:"none",borderBottom:tab===i?"3px solid #60A5FA":"3px solid transparent",borderRadius:"6px 6px 0 0",cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all 0.15s"}}>
             <span style={{fontSize:15}}>{t.icon}</span>{t.label}
           </button>)}
         </div>
       </div>
 
-      <div style={{width:"100%",padding:"24px 16px"}}>
+      <div style={{maxWidth:1100,margin:"0 auto",padding:"24px 16px"}}>
 
         {/* TASK BOARD */}
         {tab===0 && (
           <div>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-              <span style={{fontSize:12,color:"#94A3B8",fontWeight:500}}>Logging as</span>
-              {WORKERS.map(w=>{ const c=wc(w); const active=activeWorker===w; return <button key={w} onClick={()=>setActiveWorker(w)} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 14px 6px 8px",borderRadius:20,border:`1.5px solid ${active?c.dot:"#E5E7EB"}`,background:active?c.bg:"#fff",color:active?c.text:"#6B7280",cursor:"pointer",fontSize:13,fontWeight:active?600:400,transition:"all 0.15s"}}>
-                <Avatar name={w} size={22}/>{w}
-              </button>;})}
+              <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 14px 6px 8px",borderRadius:20,border:`1.5px solid ${wc(activeWorker||"").dot||"#6366F1"}`,background:wc(activeWorker||"").bg||"#EEF2FF"}}>
+                <Avatar name={isAdmin?"A":activeWorker} size={22}/>
+                <span style={{fontSize:13,fontWeight:600,color:wc(activeWorker||"").text||"#4F46E5"}}>{isAdmin?"Admin (viewing)":activeWorker}</span>
+              </div>
               <button onClick={()=>{ const rows=[["Date","Worker","Task","Category","Status","Changes","Notes","Time"],...todayEntries.map(e=>{const t=TASKS.find(x=>x.id===e.taskId);return[e.date,e.worker,t?.name,t?.category,e.status,e.changes,e.notes,fmtTime(e.ts)];})]; downloadCSV(`task-board-${todayStr()}.csv`,rows); }} style={{marginLeft:"auto",padding:"6px 12px",borderRadius:8,border:"1px solid #E5E7EB",background:"#fff",color:"#6B7280",fontSize:12,cursor:"pointer",fontWeight:500}}>↓ Export</button>
             </div>
             {CATEGORIES.map(cat=>(
               <div key={cat} style={{marginBottom:24}}>
                 <SectionHeader cat={cat}/>
                 {TASKS.filter(t=>t.category===cat).map(task=>{
-                  const isExp=expandedTask===task.id, isSaved=savedIds[task.id], myEntry=latestToday[`${activeWorker}|${task.id}`];
+                  const isExp=expandedTask===task.id;
+                  const myEntry=latestToday[`${activeWorker}|${task.id}`];
+                  const isSaved=savedIds[task.id];
                   return (
                     <Card key={task.id} style={{marginBottom:8,border:isSaved?"1.5px solid #86EFAC":"1px solid #E5E7EB",padding:0,overflow:"hidden"}}>
                       <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",flexWrap:"wrap"}}>
@@ -368,44 +529,43 @@ export default function App() {
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:8}}>
                           {isSaved&&<span style={{fontSize:11,color:"#16A34A",fontWeight:500}}>✓ saved</span>}
-                          <button onClick={()=>setExpandedTask(isExp?null:task.id)} style={{padding:"5px 12px",borderRadius:8,border:"1px solid #E5E7EB",background:"#F8FAFC",color:"#475569",fontSize:12,cursor:"pointer",fontWeight:500}}>{isExp?"▲ Close":"▼ Log"}</button>
+                          {!isAdmin && <button onClick={()=>setExpandedTask(isExp?null:task.id)} style={{padding:"5px 12px",borderRadius:8,border:"1px solid #E5E7EB",background:"#F8FAFC",color:"#475569",fontSize:12,cursor:"pointer",fontWeight:500}}>{isExp?"▲ Close":"▼ Log"}</button>}
+                          {isAdmin && <button onClick={()=>setExpandedTask(isExp?null:task.id)} style={{padding:"5px 12px",borderRadius:8,border:"1px solid #E5E7EB",background:"#F8FAFC",color:"#475569",fontSize:12,cursor:"pointer",fontWeight:500}}>{isExp?"▲ Close":"▼ View"}</button>}
                         </div>
                       </div>
                       {isExp && (
                         <div style={{borderTop:"1px solid #F1F5F9"}}>
-                          {WORKERS.filter(w=>w!==activeWorker).map(w=>{ const e=latestToday[`${w}|${task.id}`]; const c=wc(w);
-                            return <div key={w} style={{padding:"10px 16px",borderBottom:"1px solid #F8FAFC",background:"#FAFAFA",display:"flex",alignItems:"flex-start",gap:10}}>
-                              <Avatar name={w} size={28}/>
-                              <div style={{flex:1}}>
-                                <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:3}}>
-                                  <span style={{fontSize:12,fontWeight:500,color:c.text}}>{w}</span>
-                                  {e?<><Pill label={e.status} bg={STATUS_STYLE[e.status].bg} text={STATUS_STYLE[e.status].text}/><span style={{fontSize:11,color:"#94A3B8",marginLeft:"auto"}}>{fmtTime(e.ts)}</span></>:<span style={{fontSize:11,color:"#CBD5E1",fontStyle:"italic"}}>not logged yet</span>}
+                          {WORKERS.map(w=>{ const e=latestToday[`${w}|${task.id}`]; const c=wc(w); const isMe=w===activeWorker&&!isAdmin;
+                            return (
+                              <div key={w} style={{padding:"10px 16px",borderBottom:"1px solid #F8FAFC",background:isMe?c.bg+"33":"#FAFAFA",display:"flex",alignItems:"flex-start",gap:10}}>
+                                <Avatar name={w} size={28}/>
+                                <div style={{flex:1}}>
+                                  <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:3}}>
+                                    <span style={{fontSize:12,fontWeight:500,color:c.text}}>{w}{isMe&&" (you)"}</span>
+                                    {e?<><Pill label={e.status} bg={STATUS_STYLE[e.status].bg} text={STATUS_STYLE[e.status].text}/><span style={{fontSize:11,color:"#94A3B8",marginLeft:"auto"}}>{fmtTime(e.ts)}</span></>:<span style={{fontSize:11,color:"#CBD5E1",fontStyle:"italic"}}>not logged yet</span>}
+                                  </div>
+                                  {e?.changes&&<div style={{fontSize:12,color:"#475569"}}><b>Changes:</b> {e.changes}</div>}
+                                  {e?.notes&&<div style={{fontSize:12,color:"#64748B"}}><b>Notes:</b> {e.notes}</div>}
+                                  {isMe && (
+                                    <div style={{marginTop:10}}>
+                                      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10}}>
+                                        <div><label style={labelStyle}>Status</label>
+                                          <select value={form[task.id].status} onChange={e=>updateField(task.id,"status",e.target.value)} style={{...selectStyle,background:STATUS_STYLE[form[task.id].status].bg,color:STATUS_STYLE[form[task.id].status].text,fontWeight:500}}>
+                                            {STATUS_OPTS.map(s=><option key={s}>{s}</option>)}
+                                          </select>
+                                        </div>
+                                        <div><label style={labelStyle}>Changes</label><input type="text" placeholder="e.g. Rotated IPs" value={form[task.id].changes} onChange={e=>updateField(task.id,"changes",e.target.value)} style={inputStyle}/></div>
+                                        <div><label style={labelStyle}>Notes</label><input type="text" placeholder="Any remarks…" value={form[task.id].notes} onChange={e=>updateField(task.id,"notes",e.target.value)} style={inputStyle}/></div>
+                                      </div>
+                                      <div style={{marginTop:10,display:"flex",justifyContent:"flex-end"}}>
+                                        <button onClick={()=>saveEntry(task.id)} style={{padding:"7px 18px",borderRadius:8,background:c.btn,border:"none",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer"}}>Save Entry</button>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                                {e?.changes&&<div style={{fontSize:12,color:"#475569"}}><b>Changes:</b> {e.changes}</div>}
-                                {e?.notes&&<div style={{fontSize:12,color:"#64748B"}}><b>Notes:</b> {e.notes}</div>}
                               </div>
-                            </div>;
+                            );
                           })}
-                          <div style={{padding:"14px 16px",background:wc(activeWorker).bg+"33"}}>
-                            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-                              <Avatar name={activeWorker} size={28}/>
-                              <span style={{fontSize:13,fontWeight:500,color:wc(activeWorker).text}}>{activeWorker}</span>
-                              {isSaved&&<span style={{fontSize:11,color:"#16A34A",fontWeight:500,marginLeft:"auto"}}>✓ Saved</span>}
-                              {myEntry&&!isSaved&&<span style={{fontSize:11,color:"#94A3B8",marginLeft:"auto"}}>Last saved {fmtTime(myEntry.ts)}</span>}
-                            </div>
-                            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10}}>
-                              <div><label style={labelStyle}>Status</label>
-                                <select value={form[task.id].status} onChange={e=>updateField(task.id,"status",e.target.value)} style={{...selectStyle,background:STATUS_STYLE[form[task.id].status].bg,color:STATUS_STYLE[form[task.id].status].text,fontWeight:500}}>
-                                  {STATUS_OPTS.map(s=><option key={s}>{s}</option>)}
-                                </select>
-                              </div>
-                              <div><label style={labelStyle}>Changes</label><input type="text" placeholder="e.g. Rotated IPs" value={form[task.id].changes} onChange={e=>updateField(task.id,"changes",e.target.value)} style={inputStyle}/></div>
-                              <div><label style={labelStyle}>Notes</label><input type="text" placeholder="Any remarks…" value={form[task.id].notes} onChange={e=>updateField(task.id,"notes",e.target.value)} style={inputStyle}/></div>
-                            </div>
-                            <div style={{marginTop:12,display:"flex",justifyContent:"flex-end"}}>
-                              <button onClick={()=>saveEntry(task.id)} style={{padding:"7px 18px",borderRadius:8,background:wc(activeWorker).btn,border:"none",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer"}}>Save Entry</button>
-                            </div>
-                          </div>
                         </div>
                       )}
                     </Card>
@@ -433,31 +593,22 @@ export default function App() {
               <Card style={{marginBottom:16,border:"1.5px solid #E0E7FF"}}>
                 <div style={{fontSize:14,fontWeight:500,color:"#1E293B",marginBottom:14}}>{editingUpdate?"Edit post":"New post"}</div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:12}}>
-                  <div><label style={labelStyle}>Posted by</label><select value={updateForm.worker} onChange={e=>setUpdateForm(f=>({...f,worker:e.target.value}))} style={selectStyle}>{WORKERS.map(w=><option key={w}>{w}</option>)}</select></div>
+                  {isAdmin&&<div><label style={labelStyle}>Posted by</label><select value={updateForm.worker} onChange={e=>setUpdateForm(f=>({...f,worker:e.target.value}))} style={selectStyle}>{WORKERS.map(w=><option key={w}>{w}</option>)}</select></div>}
                   <div><label style={labelStyle}>Type</label><select value={updateForm.type} onChange={e=>setUpdateForm(f=>({...f,type:e.target.value}))} style={selectStyle}>{UPDATE_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
                   <div><label style={labelStyle}>Status</label><select value={updateForm.status} onChange={e=>setUpdateForm(f=>({...f,status:e.target.value}))} style={selectStyle}>{UPDATE_STATUS.map(s=><option key={s}>{s}</option>)}</select></div>
                 </div>
                 <div style={{marginBottom:10}}><label style={labelStyle}>Title *</label><input type="text" placeholder="Brief title…" value={updateForm.title} onChange={e=>setUpdateForm(f=>({...f,title:e.target.value}))} style={inputStyle}/></div>
-                <div style={{marginBottom:10}}><label style={labelStyle}>Description</label><textarea rows={3} placeholder="Describe the change, experiment or observation…" value={updateForm.description} onChange={e=>setUpdateForm(f=>({...f,description:e.target.value}))} style={{...inputStyle,resize:"vertical"}}/></div>
-                <div style={{marginBottom:12}}><label style={labelStyle}>Result / outcome</label><textarea rows={2} placeholder="What happened? Metrics, observations…" value={updateForm.result} onChange={e=>setUpdateForm(f=>({...f,result:e.target.value}))} style={{...inputStyle,resize:"vertical"}}/></div>
+                <div style={{marginBottom:10}}><label style={labelStyle}>Description</label><textarea rows={3} value={updateForm.description} onChange={e=>setUpdateForm(f=>({...f,description:e.target.value}))} style={{...inputStyle,resize:"vertical"}}/></div>
+                <div style={{marginBottom:12}}><label style={labelStyle}>Result / outcome</label><textarea rows={2} value={updateForm.result} onChange={e=>setUpdateForm(f=>({...f,result:e.target.value}))} style={{...inputStyle,resize:"vertical"}}/></div>
                 <div style={{background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:10,padding:"14px 16px",marginBottom:12}}>
                   <div style={{fontSize:12,fontWeight:500,color:"#475569",marginBottom:10}}>IP cluster details</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:10}}>
                     <div><label style={labelStyle}>Change type</label><select value={updateForm.ipChangeType} onChange={e=>setUpdateForm(f=>({...f,ipChangeType:e.target.value}))} style={selectStyle}>{IP_CHANGE_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
-                    {updateForm.ipChangeType==="Other"&&<div><label style={labelStyle}>Specify other</label><input type="text" value={updateForm.ipOther||""} onChange={e=>setUpdateForm(f=>({...f,ipOther:e.target.value}))} style={inputStyle}/></div>}
                     <div><label style={labelStyle}>Cluster ID</label><input type="text" placeholder="e.g. Cluster 3" value={updateForm.ipDetail} onChange={e=>setUpdateForm(f=>({...f,ipDetail:e.target.value}))} style={inputStyle}/></div>
-                    <div><label style={labelStyle}>IP range</label><input type="text" placeholder="185.228.36.6-15" value={updateForm.ipRange} onChange={e=>setUpdateForm(f=>({...f,ipRange:e.target.value}))} style={{...inputStyle,fontFamily:"monospace"}}/></div>
-                    <div><label style={labelStyle}>Reason</label><input type="text" placeholder="Why this change?" value={updateForm.ipReason} onChange={e=>setUpdateForm(f=>({...f,ipReason:e.target.value}))} style={inputStyle}/></div>
-                    <div><label style={labelStyle}>Result of change</label><input type="text" placeholder="What happened?" value={updateForm.ipResult} onChange={e=>setUpdateForm(f=>({...f,ipResult:e.target.value}))} style={inputStyle}/></div>
+                    <div><label style={labelStyle}>IP range</label><input type="text" value={updateForm.ipRange} onChange={e=>setUpdateForm(f=>({...f,ipRange:e.target.value}))} style={{...inputStyle,fontFamily:"monospace"}}/></div>
+                    <div><label style={labelStyle}>Reason</label><input type="text" value={updateForm.ipReason} onChange={e=>setUpdateForm(f=>({...f,ipReason:e.target.value}))} style={inputStyle}/></div>
+                    <div><label style={labelStyle}>Result of change</label><input type="text" value={updateForm.ipResult} onChange={e=>setUpdateForm(f=>({...f,ipResult:e.target.value}))} style={inputStyle}/></div>
                   </div>
-                  {(updateForm.extraIPs||[]).map((ip,i)=>(
-                    <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:8,marginBottom:8}}>
-                      <div><label style={labelStyle}>Cluster {i+2}</label><input type="text" value={ip.ipDetail} onChange={e=>setUpdateForm(f=>({...f,extraIPs:f.extraIPs.map((x,j)=>j===i?{...x,ipDetail:e.target.value}:x)}))} style={inputStyle}/></div>
-                      <div><label style={labelStyle}>IP range {i+2}</label><input type="text" value={ip.ipRange} onChange={e=>setUpdateForm(f=>({...f,extraIPs:f.extraIPs.map((x,j)=>j===i?{...x,ipRange:e.target.value}:x)}))} style={{...inputStyle,fontFamily:"monospace"}}/></div>
-                      <button onClick={()=>setUpdateForm(f=>({...f,extraIPs:f.extraIPs.filter((_,j)=>j!==i)}))} style={{alignSelf:"flex-end",padding:"7px 10px",borderRadius:8,border:"1px solid #FCA5A5",background:"#FEF2F2",color:"#B91C1C",cursor:"pointer",fontSize:14}}>×</button>
-                    </div>
-                  ))}
-                  <button onClick={()=>setUpdateForm(f=>({...f,extraIPs:[...(f.extraIPs||[]),{ipDetail:"",ipRange:""}]}))} style={{fontSize:12,color:"#64748B",border:"1px dashed #CBD5E1",borderRadius:8,padding:"6px 12px",background:"transparent",cursor:"pointer",width:"100%"}}>+ Add another IP</button>
                 </div>
                 <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
                   <Btn onClick={()=>{setShowUpdateForm(false);setEditingUpdate(null);}}>Cancel</Btn>
@@ -467,16 +618,13 @@ export default function App() {
             )}
             <Card style={{marginBottom:16,padding:"12px 16px"}}>
               <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:8}}>
-                <span style={{fontSize:11,color:"#94A3B8",fontWeight:500,textTransform:"uppercase",letterSpacing:"0.05em"}}>Filter</span>
                 <select value={filterUW} onChange={e=>setFilterUW(e.target.value)} style={{...selectStyle,width:"auto",padding:"5px 10px"}}><option value="All">All workers</option>{WORKERS.map(w=><option key={w}>{w}</option>)}</select>
                 <select value={filterUT} onChange={e=>setFilterUT(e.target.value)} style={{...selectStyle,width:"auto",padding:"5px 10px"}}><option value="All">All types</option>{UPDATE_TYPES.map(t=><option key={t}>{t}</option>)}</select>
                 <select value={filterUS} onChange={e=>setFilterUS(e.target.value)} style={{...selectStyle,width:"auto",padding:"5px 10px"}}><option value="All">All statuses</option>{UPDATE_STATUS.map(s=><option key={s}>{s}</option>)}</select>
-                <select value={filterUIP} onChange={e=>setFilterUIP(e.target.value)} style={{...selectStyle,width:"auto",padding:"5px 10px"}}><option value="All">All IP changes</option>{IP_CHANGE_TYPES.filter(t=>t!=="— None —").map(t=><option key={t}>{t}</option>)}</select>
                 <input type="text" placeholder="Search cluster…" value={filterUClusterText} onChange={e=>setFilterUClusterText(e.target.value)} style={{...inputStyle,width:130,padding:"5px 10px"}}/>
                 <span style={{marginLeft:"auto",fontSize:12,color:"#94A3B8"}}>{filteredUpdates.length} posts</span>
               </div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                <span style={{fontSize:11,color:"#94A3B8",fontWeight:500,textTransform:"uppercase",letterSpacing:"0.05em"}}>Period</span>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                 {[["all","All time"],["today","Today"],["week","7 days"],["month","This month"],["last30","30 days"],["custom","Custom"]].map(([k,l])=>(
                   <button key={k} onClick={()=>applyUPreset(k)} style={{padding:"4px 10px",borderRadius:20,fontSize:12,fontWeight:500,cursor:"pointer",border:`1px solid ${filterUPreset===k?"#6366F1":"#E5E7EB"}`,background:filterUPreset===k?"#6366F1":"transparent",color:filterUPreset===k?"#fff":"#64748B"}}>{l}</button>
                 ))}
@@ -484,7 +632,7 @@ export default function App() {
               </div>
             </Card>
             {filteredUpdates.length===0&&<div style={{textAlign:"center",padding:"64px 0",color:"#CBD5E1"}}><div style={{fontSize:32,marginBottom:8}}>⚗</div><div style={{fontSize:14}}>No posts yet</div></div>}
-            {filteredUpdates.map(u=>{ const c=wc(u.worker); const tm=UPDATE_TYPE_META[u.type]; const sm=UPDATE_STATUS_META[u.status]||UPDATE_STATUS_META["Ongoing"]; const isExpU=expandedUpdate===u.id; return (
+            {filteredUpdates.map(u=>{ const c=wc(u.worker); const tm=UPDATE_TYPE_META[u.type]; const sm=UPDATE_STATUS_META[u.status]||UPDATE_STATUS_META["Ongoing"]; const isExpU=expandedUpdate===u.id; const canEditUpdate=isAdmin||u.worker===activeWorker; return (
               <Card key={u.id} style={{marginBottom:10,padding:0,overflow:"hidden"}}>
                 <div style={{padding:"14px 18px"}}>
                   <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
@@ -520,10 +668,10 @@ export default function App() {
                     <button onClick={()=>setExpandedUpdate(isExpU?null:u.id)} style={{fontSize:12,color:"#64748B",background:"transparent",border:"1px solid #E5E7EB",borderRadius:8,padding:"4px 10px",cursor:"pointer"}}>
                       ◎ {u.replies?.length||0} {(u.replies?.length||0)===1?"reply":"replies"}
                     </button>
-                    <div style={{marginLeft:"auto",display:"flex",gap:6,flexWrap:"wrap"}}>
+                    {canEditUpdate&&<div style={{marginLeft:"auto",display:"flex",gap:6,flexWrap:"wrap"}}>
                       {UPDATE_STATUS.map(s=>{ const active=u.status===s; const m=UPDATE_STATUS_META[s]; return <button key={s} onClick={()=>changeUpdateStatus(u.id,s)} style={{fontSize:11,padding:"3px 8px",borderRadius:20,border:`1px solid ${active?m.dot:"#E5E7EB"}`,background:active?m.bg:"transparent",color:active?m.text:"#94A3B8",cursor:"pointer",fontWeight:active?500:400}}>{s}</button>;})}
                       <button onClick={()=>{setEditingUpdate(u.id);setUpdateForm({type:u.type,worker:u.worker,title:u.title,description:u.description,result:u.result,status:u.status,ipChangeType:u.ipChangeType||"— None —",ipOther:u.ipOther||"",ipDetail:u.ipDetail||"",ipRange:u.ipRange||"",ipReason:u.ipReason||"",ipResult:u.ipResult||"",extraIPs:u.extraIPs||[]});setShowUpdateForm(true);window.scrollTo({top:0,behavior:"smooth"});}} style={{fontSize:11,padding:"3px 10px",borderRadius:20,border:"1px solid #E5E7EB",background:"transparent",color:"#94A3B8",cursor:"pointer"}}>✎ Edit</button>
-                    </div>
+                    </div>}
                   </div>
                 </div>
                 {isExpU&&(
@@ -533,9 +681,8 @@ export default function App() {
                       <div><div style={{display:"flex",gap:8,alignItems:"center",marginBottom:3}}><span style={{fontSize:12,fontWeight:500,color:rc.text}}>{r.worker}</span><span style={{fontSize:11,color:"#CBD5E1"}}>{fmtDT(r.ts)}</span></div><div style={{fontSize:13,color:"#374151"}}>{r.text}</div></div>
                     </div>;})}
                     <div style={{padding:"10px 18px",display:"flex",gap:8,alignItems:"center"}}>
-                      <select value={replyWorkers[u.id]||WORKERS[0]} onChange={e=>setReplyWorkers(p=>({...p,[u.id]:e.target.value}))} style={{...selectStyle,width:"auto",padding:"6px 10px",flexShrink:0}}>{WORKERS.map(w=><option key={w}>{w}</option>)}</select>
-                      <input type="text" placeholder="Write a reply…" value={replyInputs[u.id]||""} onChange={e=>setReplyInputs(p=>({...p,[u.id]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter"){addReply(u.id,replyInputs[u.id]||"",replyWorkers[u.id]||WORKERS[0]);setReplyInputs(p=>({...p,[u.id]:""}));}}} style={{...inputStyle,flex:1}}/>
-                      <button onClick={()=>{addReply(u.id,replyInputs[u.id]||"",replyWorkers[u.id]||WORKERS[0]);setReplyInputs(p=>({...p,[u.id]:""}));}} style={{padding:"6px 14px",borderRadius:8,background:"#1E293B",color:"#fff",border:"none",fontSize:13,cursor:"pointer",fontWeight:500}}>Reply</button>
+                      <input type="text" placeholder="Write a reply…" value={replyInputs[u.id]||""} onChange={e=>setReplyInputs(p=>({...p,[u.id]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter"){addReply(u.id,replyInputs[u.id]||"",activeWorker);setReplyInputs(p=>({...p,[u.id]:""}));}}} style={{...inputStyle,flex:1}}/>
+                      <button onClick={()=>{addReply(u.id,replyInputs[u.id]||"",activeWorker);setReplyInputs(p=>({...p,[u.id]:""}));}} style={{padding:"6px 14px",borderRadius:8,background:"#1E293B",color:"#fff",border:"none",fontSize:13,cursor:"pointer",fontWeight:500}}>Reply</button>
                     </div>
                   </div>
                 )}
@@ -644,10 +791,7 @@ export default function App() {
             <div>
               <Card style={{marginBottom:16,padding:"16px 20px"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8,marginBottom:14}}>
-                  <div>
-                    <div style={{fontSize:16,fontWeight:500,color:"#1E293B"}}>Reports & trends</div>
-                    <div style={{fontSize:12,color:"#94A3B8",marginTop:2}}>Select a date range to explore team performance</div>
-                  </div>
+                  <div><div style={{fontSize:16,fontWeight:500,color:"#1E293B"}}>Reports & trends</div></div>
                   <div style={{display:"flex",gap:8}}>
                     <select value={rWorker} onChange={e=>setRWorker(e.target.value)} style={{...selectStyle,width:"auto"}}><option>All</option>{WORKERS.map(w=><option key={w}>{w}</option>)}</select>
                     <button onClick={()=>{ const rows=[["Date","Worker","Task","Category","Status","Changes","Notes","Time"],...rangeEntries.map(e=>{const t=TASKS.find(x=>x.id===e.taskId);return[e.date,e.worker,t?.name,t?.category,e.status,e.changes,e.notes,fmtTime(e.ts)];})]; downloadCSV(`report-${rFrom}_to_${rTo}.csv`,rows); }} style={{padding:"6px 12px",borderRadius:8,border:"1px solid #E5E7EB",background:"#fff",color:"#64748B",fontSize:12,cursor:"pointer",fontWeight:500}}>↓ Export</button>
@@ -686,9 +830,7 @@ export default function App() {
                         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10,textAlign:"center"}}>
                           {[["Entries",total],["Days",days],["OK",ok]].map(([l,v])=><div key={l}><div style={{fontSize:16,fontWeight:500,color:"#1E293B"}}>{v}</div><div style={{fontSize:10,color:"#94A3B8"}}>{l}</div></div>)}
                         </div>
-                        <div style={{height:4,borderRadius:4,background:"#F1F5F9",overflow:"hidden"}}>
-                          <div style={{width:`${pct}%`,height:4,background:c.dot,borderRadius:4}}/>
-                        </div>
+                        <div style={{height:4,borderRadius:4,background:"#F1F5F9",overflow:"hidden"}}><div style={{width:`${pct}%`,height:4,background:c.dot,borderRadius:4}}/></div>
                         <div style={{fontSize:11,color:"#94A3B8",marginTop:4}}>{pct}% OK rate</div>
                       </Card>
                     );})}
@@ -697,21 +839,14 @@ export default function App() {
                     <div style={{padding:"12px 16px",borderBottom:"1px solid #F1F5F9",fontSize:13,fontWeight:500,color:"#1E293B"}}>Task health</div>
                     <div style={{overflowX:"auto"}}>
                       <table style={{width:"100%",fontSize:12,borderCollapse:"collapse"}}>
-                        <thead><tr style={{background:"#F8FAFC"}}>
-                          {["Task","Category","Total","OK","OK rate","Health"].map(h=><th key={h} style={{padding:"8px 14px",textAlign:"left",fontWeight:500,color:"#94A3B8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.05em",whiteSpace:"nowrap"}}>{h}</th>)}
-                        </tr></thead>
+                        <thead><tr style={{background:"#F8FAFC"}}>{["Task","Category","Total","OK","OK rate","Health"].map(h=><th key={h} style={{padding:"8px 14px",textAlign:"left",fontWeight:500,color:"#94A3B8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.05em",whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
                         <tbody>{taskStats.map(t=>{ const pct=t.total>0?Math.round((t.ok/t.total)*100):0; const health=t.total===0?"—":t.ok===t.total?"●":"◑"; const hcolor=t.total===0?"#CBD5E1":t.ok===t.total?"#16A34A":"#D97706"; return (
                           <tr key={t.id} style={{borderTop:"1px solid #F8FAFC"}}>
                             <td style={{padding:"9px 14px",color:"#374151",fontWeight:500}}>{t.name}</td>
                             <td style={{padding:"9px 14px",color:"#94A3B8"}}>{t.category}</td>
                             <td style={{padding:"9px 14px",color:"#6366F1",fontWeight:500}}>{t.total}</td>
                             <td style={{padding:"9px 14px",color:"#16A34A",fontWeight:500}}>{t.ok}</td>
-                            <td style={{padding:"9px 14px"}}>
-                              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                                <div style={{width:60,height:3,borderRadius:3,background:"#F1F5F9",overflow:"hidden"}}><div style={{width:`${pct}%`,height:3,background:"#22C55E",borderRadius:3}}/></div>
-                                <span style={{fontSize:11,color:"#64748B"}}>{pct}%</span>
-                              </div>
-                            </td>
+                            <td style={{padding:"9px 14px"}}><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:60,height:3,borderRadius:3,background:"#F1F5F9",overflow:"hidden"}}><div style={{width:`${pct}%`,height:3,background:"#22C55E",borderRadius:3}}/></div><span style={{fontSize:11,color:"#64748B"}}>{pct}%</span></div></td>
                             <td style={{padding:"9px 14px",color:hcolor,fontSize:14}}>{health}</td>
                           </tr>
                         );})}
@@ -728,16 +863,14 @@ export default function App() {
                   </div>
                   <div style={{overflowX:"auto"}}>
                     <table style={{width:"100%",fontSize:12,borderCollapse:"collapse"}}>
-                      <thead><tr style={{background:"#F8FAFC"}}>
-                        {["Date & time","Worker","Task","Status","Changes","Notes"].map(h=><th key={h} style={{padding:"8px 14px",textAlign:"left",fontWeight:500,color:"#94A3B8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.05em",whiteSpace:"nowrap"}}>{h}</th>)}
-                      </tr></thead>
+                      <thead><tr style={{background:"#F8FAFC"}}>{["Date & time","Worker","Task","Status","Changes","Notes"].map(h=><th key={h} style={{padding:"8px 14px",textAlign:"left",fontWeight:500,color:"#94A3B8",fontSize:11,textTransform:"uppercase",letterSpacing:"0.05em",whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
                       <tbody>
                         {rangeEntries.length===0&&<tr><td colSpan={6} style={{padding:"40px",textAlign:"center",color:"#CBD5E1"}}>No entries for this period</td></tr>}
                         {[...rangeEntries].reverse().map(e=>{ const task=TASKS.find(t=>t.id===e.taskId); const c=wc(e.worker); const sm=STATUS_STYLE[e.status]; return (
                           <tr key={e.id} style={{borderTop:"1px solid #F8FAFC"}}>
                             <td style={{padding:"8px 14px",color:"#94A3B8",whiteSpace:"nowrap"}}>{fmtDT(e.ts)}</td>
                             <td style={{padding:"8px 14px"}}><span style={{fontSize:11,padding:"2px 8px",borderRadius:20,background:c.bg,color:c.text,fontWeight:500}}>{e.worker}</span></td>
-                            <td style={{padding:"8px 14px",color:"#374151",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{task?.name}</td>
+                            <td style={{padding:"8px 14px",color:"#374151"}}>{task?.name}</td>
                             <td style={{padding:"8px 14px"}}><Pill label={e.status} bg={sm.bg} text={sm.text}/></td>
                             <td style={{padding:"8px 14px",color:"#64748B"}}>{e.changes||"—"}</td>
                             <td style={{padding:"8px 14px",color:"#64748B"}}>{e.notes||"—"}</td>
@@ -792,31 +925,29 @@ export default function App() {
                       const key = `${task.id}|${w}`;
                       const open = !!monthlyOpen[key];
                       const fields = monthlyFields[key] || { status: log?.status||"Pending", notes: log?.notes||"" };
+                      const isMe = w === activeWorker;
+                      const canEditThis = isAdmin || isMe;
                       const setOpen = val => setMonthlyOpen(p=>({...p,[key]:val}));
                       const setFields = fn => setMonthlyFields(p=>({...p,[key]:fn(p[key]||fields)}));
                       return (
                         <div key={w} style={{borderBottom:"1px solid #F8FAFC"}}>
                           <div style={{display:"flex",alignItems:"center",gap:12,padding:"11px 20px",flexWrap:"wrap"}}>
                             <Avatar name={w} size={28}/>
-                            <span style={{fontSize:13,fontWeight:500,color:c.text,width:70}}>{w}</span>
+                            <span style={{fontSize:13,fontWeight:500,color:c.text,width:70}}>{w}{isMe&&!isAdmin&&" ✎"}</span>
                             <Pill label={log?.status||"Pending"} bg={log?.status==="Done"?"#DCFCE7":log?.status==="In Progress"?"#EFF6FF":"#F9FAFB"} text={log?.status==="Done"?"#166534":log?.status==="In Progress"?"#1D4ED8":"#94A3B8"}/>
                             {log?.notes&&<span style={{fontSize:12,color:"#64748B",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{log.notes}</span>}
                             {log?.ts&&<span style={{fontSize:11,color:"#CBD5E1",marginLeft:"auto",flexShrink:0}}>{fmtDT(log.ts)}</span>}
-                            <button onClick={()=>setOpen(!open)} style={{padding:"4px 12px",borderRadius:8,border:"1px solid #E5E7EB",background:"#F8FAFC",color:"#475569",fontSize:12,cursor:"pointer",fontWeight:500,flexShrink:0}}>{open?"▲ Close":"✎ Log"}</button>
+                            {canEditThis&&<button onClick={()=>setOpen(!open)} style={{padding:"4px 12px",borderRadius:8,border:"1px solid #E5E7EB",background:"#F8FAFC",color:"#475569",fontSize:12,cursor:"pointer",fontWeight:500,flexShrink:0}}>{open?"▲ Close":"✎ Log"}</button>}
                           </div>
-                          {open&&(
+                          {open&&canEditThis&&(
                             <div style={{padding:"12px 20px 16px",background:c.bg+"22",borderTop:"1px solid #F1F5F9"}}>
                               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10,marginBottom:12}}>
-                                <div>
-                                  <label style={labelStyle}>Status</label>
+                                <div><label style={labelStyle}>Status</label>
                                   <select value={fields.status} onChange={e=>setFields(f=>({...f,status:e.target.value}))} style={{...selectStyle,background:fields.status==="Done"?"#DCFCE7":fields.status==="In Progress"?"#EFF6FF":"#F9FAFB",color:fields.status==="Done"?"#166534":fields.status==="In Progress"?"#1D4ED8":"#94A3B8",fontWeight:500}}>
                                     {["Pending","In Progress","Done"].map(s=><option key={s}>{s}</option>)}
                                   </select>
                                 </div>
-                                <div style={{gridColumn:"span 2"}}>
-                                  <label style={labelStyle}>Notes</label>
-                                  <input type="text" placeholder="Any remarks or details…" value={fields.notes} onChange={e=>setFields(f=>({...f,notes:e.target.value}))} style={inputStyle}/>
-                                </div>
+                                <div style={{gridColumn:"span 2"}}><label style={labelStyle}>Notes</label><input type="text" placeholder="Any remarks or details…" value={fields.notes} onChange={e=>setFields(f=>({...f,notes:e.target.value}))} style={inputStyle}/></div>
                               </div>
                               <div style={{display:"flex",justifyContent:"flex-end"}}>
                                 <button onClick={()=>{saveMonthlyEntry(task.id,w,fields);setOpen(false);}} style={{padding:"7px 18px",borderRadius:8,background:c.btn,border:"none",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer"}}>Save</button>
@@ -832,53 +963,37 @@ export default function App() {
             </div>
           );
         })()}
+
         {/* DEMO */}
         {tab===5 && (
           <div style={{maxWidth:600,margin:"0 auto"}}>
             <Card style={{marginBottom:16,padding:"20px 24px"}}>
               <div style={{fontSize:16,fontWeight:500,color:"#1E293B",marginBottom:4}}>🎯 Demo Data</div>
-              <div style={{fontSize:13,color:"#64748B",marginBottom:20,lineHeight:1.6}}>Generate realistic sample data to show your team how the tracker looks when fully in use. All demo records are clearly marked and can be removed in one click.</div>
-
+              <div style={{fontSize:13,color:"#64748B",marginBottom:20,lineHeight:1.6}}>Generate realistic sample data to show your team how the tracker looks when fully in use. All demo records can be removed in one click.</div>
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
                 <div style={{background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
-                  <div>
-                    <div style={{fontSize:13,fontWeight:500,color:"#1E293B",marginBottom:2}}>📋 Task Board entries</div>
-                    <div style={{fontSize:12,color:"#94A3B8"}}>2 weeks of daily task logs for all 4 workers</div>
-                  </div>
+                  <div><div style={{fontSize:13,fontWeight:500,color:"#1E293B",marginBottom:2}}>📋 Task Board entries</div><div style={{fontSize:12,color:"#94A3B8"}}>2 weeks of daily task logs for all 4 workers</div></div>
                   <button onClick={generateDemoData} style={{padding:"8px 18px",borderRadius:8,background:"#6366F1",border:"none",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer",flexShrink:0}}>Generate</button>
                 </div>
-
                 <div style={{background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
-                  <div>
-                    <div style={{fontSize:13,fontWeight:500,color:"#1E293B",marginBottom:2}}>⚗ Cluster Updates</div>
-                    <div style={{fontSize:12,color:"#94A3B8"}}>5 sample posts — experiments, fixes, observations</div>
-                  </div>
+                  <div><div style={{fontSize:13,fontWeight:500,color:"#1E293B",marginBottom:2}}>⚗ Cluster Updates</div><div style={{fontSize:12,color:"#94A3B8"}}>4 sample posts — experiments, fixes, observations</div></div>
                   <button onClick={generateDemoUpdates} style={{padding:"8px 18px",borderRadius:8,background:"#F59E0B",border:"none",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer",flexShrink:0}}>Generate</button>
                 </div>
-
                 <div style={{background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
-                  <div>
-                    <div style={{fontSize:13,fontWeight:500,color:"#1E293B",marginBottom:2}}>📅 Monthly Tasks</div>
-                    <div style={{fontSize:12,color:"#94A3B8"}}>Sample progress for all workers this month</div>
-                  </div>
+                  <div><div style={{fontSize:13,fontWeight:500,color:"#1E293B",marginBottom:2}}>📅 Monthly Tasks</div><div style={{fontSize:12,color:"#94A3B8"}}>Sample progress for all workers this month</div></div>
                   <button onClick={generateDemoMonthly} style={{padding:"8px 18px",borderRadius:8,background:"#059669",border:"none",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer",flexShrink:0}}>Generate</button>
                 </div>
-
                 <div style={{background:"#FEF2F2",border:"1px solid #FCA5A5",borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginTop:8}}>
-                  <div>
-                    <div style={{fontSize:13,fontWeight:500,color:"#B91C1C",marginBottom:2}}>🗑 Remove all demo data</div>
-                    <div style={{fontSize:12,color:"#F87171"}}>Deletes only demo records — real data is kept safe</div>
-                  </div>
+                  <div><div style={{fontSize:13,fontWeight:500,color:"#B91C1C",marginBottom:2}}>🗑 Remove all demo data</div><div style={{fontSize:12,color:"#F87171"}}>Deletes only demo records — real data is kept safe</div></div>
                   <button onClick={clearDemoData} style={{padding:"8px 18px",borderRadius:8,background:"#B91C1C",border:"none",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer",flexShrink:0}}>Remove</button>
                 </div>
               </div>
             </Card>
-
-            <div style={{textAlign:"center",fontSize:12,color:"#CBD5E1"}}>
-              Demo data is stored in the shared database — your whole team will see it when generated.
-            </div>
           </div>
         )}
+
+        {/* USERS - Admin only */}
+        {tab===6 && isAdmin && <AdminPanel currentUser={currentUser}/>}
 
       </div>
     </div>
