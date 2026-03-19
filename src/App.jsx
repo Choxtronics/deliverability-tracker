@@ -310,7 +310,7 @@ export default function App() {
     { icon:"↗", label:"Reports" },
     { icon:"📅", label:"Monthly Tasks" },
     { icon:"🔍", label:"IP Finder" },
-
+    { icon:"🎯", label:"Demo" },
     ...(isAdmin ? [{ icon:"👤", label:"Users" }] : []),
   ];
 
@@ -1171,11 +1171,38 @@ export default function App() {
           </div>
         )}
 
+        {/* DEMO */}
+        {tab===6 && (
+          <div style={{maxWidth:600,margin:"0 auto"}}>
+            <Card style={{marginBottom:16,padding:"20px 24px"}}>
+              <div style={{fontSize:16,fontWeight:500,color:"#1E293B",marginBottom:4}}>Demo Data</div>
+              <div style={{fontSize:13,color:"#64748B",marginBottom:20,lineHeight:1.6}}>Generate realistic sample data to show your team how the tracker looks when fully in use. All demo records can be removed in one click.</div>
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                <div style={{background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+                  <div><div style={{fontSize:13,fontWeight:500,color:"#1E293B",marginBottom:2}}>📋 Task Board entries</div><div style={{fontSize:12,color:"#94A3B8"}}>2 weeks of daily task logs for all 4 workers</div></div>
+                  <button onClick={generateDemoData} style={{padding:"8px 18px",borderRadius:8,background:"#6366F1",border:"none",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer",flexShrink:0}}>Generate</button>
+                </div>
+                <div style={{background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+                  <div><div style={{fontSize:13,fontWeight:500,color:"#1E293B",marginBottom:2}}>⚗ Cluster Updates</div><div style={{fontSize:12,color:"#94A3B8"}}>4 sample posts — experiments, fixes, observations</div></div>
+                  <button onClick={generateDemoUpdates} style={{padding:"8px 18px",borderRadius:8,background:"#F59E0B",border:"none",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer",flexShrink:0}}>Generate</button>
+                </div>
+                <div style={{background:"#F8FAFC",border:"1px solid #E5E7EB",borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+                  <div><div style={{fontSize:13,fontWeight:500,color:"#1E293B",marginBottom:2}}>📅 Monthly Tasks</div><div style={{fontSize:12,color:"#94A3B8"}}>Sample progress for all workers this month</div></div>
+                  <button onClick={generateDemoMonthly} style={{padding:"8px 18px",borderRadius:8,background:"#059669",border:"none",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer",flexShrink:0}}>Generate</button>
+                </div>
+                <div style={{background:"#FEF2F2",border:"1px solid #FCA5A5",borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",marginTop:8}}>
+                  <div><div style={{fontSize:13,fontWeight:500,color:"#B91C1C",marginBottom:2}}>🗑 Remove all demo data</div><div style={{fontSize:12,color:"#F87171"}}>Deletes only demo records — real data is kept safe</div></div>
+                  <button onClick={clearDemoData} style={{padding:"8px 18px",borderRadius:8,background:"#B91C1C",border:"none",color:"#fff",fontSize:13,fontWeight:500,cursor:"pointer",flexShrink:0}}>Remove</button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+
         {/* USERS - Admin only */}
-        {tab===6 && isAdmin && <AdminPanel currentUser={currentUser}/>}
+        {tab===7 && isAdmin && <AdminPanel currentUser={currentUser}/>}
 
       </div>
     </div>
   );
 }
-// v2
