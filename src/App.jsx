@@ -302,10 +302,10 @@ export default function App() {
   );
 
   return (
-    <div style={{minHeight:"100vh",width:"100%",overflowX:"hidden",background:"#F8FAFC",fontFamily:"system-ui,sans-serif"}}>
+    <div style={{minHeight:"100vh",background:"#F8FAFC",fontFamily:"system-ui,sans-serif"}}>
       {/* Header */}
-      <div style={{background:"#1B3A6B",padding:"0 24px",boxSizing:"border-box"}}>
-        <div style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12,paddingTop:16,paddingBottom:16}}>
+      <div style={{background:"#1B3A6B",padding:"0 24px"}}>
+        <div style={{maxWidth:1100,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12,paddingTop:16,paddingBottom:16}}>
           <div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <span style={{fontSize:18,fontWeight:500,color:"#F1F5F9"}}>Deliverability Tracker</span>
@@ -331,14 +331,14 @@ export default function App() {
             <button onClick={loadAll} style={{padding:"6px 12px",borderRadius:8,border:"1px solid #2E5096",background:"#243F72",color:"#93C5FD",fontSize:12,cursor:"pointer",fontWeight:500}}>↻ Refresh</button>
           </div>
         </div>
-        <div style={{width:"100%",display:"flex",gap:2}}>
+        <div style={{maxWidth:1100,margin:"0 auto",display:"flex",gap:2}}>
           {TABS.map((t,i)=><button key={i} onClick={()=>setTab(i)} style={{padding:"10px 20px",fontSize:14,fontWeight:500,color:tab===i?"#fff":"#93B4D8",background:tab===i?"rgba(255,255,255,0.12)":"transparent",border:"none",borderBottom:tab===i?"3px solid #60A5FA":"3px solid transparent",borderRadius:"6px 6px 0 0",cursor:"pointer",display:"flex",alignItems:"center",gap:7,transition:"all 0.15s"}}>
             <span style={{fontSize:15}}>{t.icon}</span>{t.label}
           </button>)}
         </div>
       </div>
 
-      <div style={{width:"100%",padding:"24px 16px"}}>
+      <div style={{maxWidth:1100,margin:"0 auto",padding:"24px 16px"}}>
 
         {/* TASK BOARD */}
         {tab===0 && (
