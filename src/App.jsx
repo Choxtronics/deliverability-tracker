@@ -280,6 +280,28 @@ export default function App() {
 
   const isAdmin = currentUser?.role === "admin";
   const activeWorker = currentUser?.worker_name || null;
+  const [onlineUsers, setOnlineUsers] = useState([]);
+
+  // Track online presence
+  useEffect(() => {
+    if (!currentUser || !activeWorker) return;
+    const markOnline = async () => {
+      await supabase.from("online_users").upsert({ worker_name: activeWorker, last_seen: new Date().toISOString() });
+    };
+    const fetchOnline = async () => {
+      const cutoff = new Date(Date.now() - 2 * 60 * 1000).toISOString(); // 2 min window
+      const { data } = await supabase.from("online_users").select("*").gte("last_seen", cutoff);
+      if (data) setOnlineUsers(data.map(r => r.worker_name));
+    };
+    markOnline();
+    fetchOnline();
+    const interval = setInterval(() => { markOnline(); fetchOnline(); }, 30000);
+    const handleUnload = async () => {
+      await supabase.from("online_users").delete().eq("worker_name", activeWorker);
+    };
+    window.addEventListener("beforeunload", handleUnload);
+    return () => { clearInterval(interval); window.removeEventListener("beforeunload", handleUnload); };
+  }, [currentUser, activeWorker]);
 
   const TABS = [
     { icon:"▦", label:"Task Board" },
@@ -465,16 +487,17 @@ export default function App() {
             <div style={{fontSize:12,color:"#93B4D8",marginTop:2,fontWeight:500}}>{fmtFull(todayStr())}</div>
           </div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-            {WORKERS.map(w=>{ const c=wc(w); const done=new Set(todayEntries.filter(e=>e.worker===w).map(e=>e.taskId)).size; const pct=Math.round((done/TASKS.length)*100); const isLoggedIn=w===activeWorker&&!isAdmin;
+            {WORKERS.map(w=>{ const c=wc(w); const done=new Set(todayEntries.filter(e=>e.worker===w).map(e=>e.taskId)).size; const pct=Math.round((done/TASKS.length)*100); const isLoggedIn=w===activeWorker&&!isAdmin; const isOnline=onlineUsers.includes(w);
               return <div key={w} style={{display:"flex",alignItems:"center",gap:8,background:"#243F72",border:`1px solid ${isLoggedIn?"#60A5FA":"#2E5096"}`,borderRadius:10,padding:"6px 12px",position:"relative"}}>
                 <div style={{position:"relative"}}>
                   <Avatar name={w} size={26}/>
-                  {isLoggedIn&&<span style={{position:"absolute",top:-3,right:-3,width:9,height:9,borderRadius:"50%",background:"#22C55E",border:"2px solid #1B3A6B"}}/>}
+                  {isOnline&&<span style={{position:"absolute",top:-3,right:-3,width:9,height:9,borderRadius:"50%",background:"#22C55E",border:"2px solid #1B3A6B"}}/>}
                 </div>
                 <div>
                   <div style={{display:"flex",alignItems:"center",gap:5}}>
                     <div style={{fontSize:12,fontWeight:500,color:"#F1F5F9"}}>{w}</div>
                     {isLoggedIn&&<span style={{fontSize:9,background:"#22C55E",color:"#fff",padding:"1px 5px",borderRadius:20,fontWeight:600}}>YOU</span>}
+                    {isOnline&&!isLoggedIn&&<span style={{fontSize:9,background:"#22C55E",color:"#fff",padding:"1px 5px",borderRadius:20,fontWeight:600}}>ON</span>}
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
                     <div style={{width:48,height:3,borderRadius:2,background:"#334155"}}>
